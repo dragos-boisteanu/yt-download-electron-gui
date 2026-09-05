@@ -6,10 +6,8 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
-  plugins: [
-    vue(),
-    vueDevTools(),
-  ],
+  plugins: [vue(), vueDevTools()],
+  base: './', // <-- Ensures assets load with relative paths (e.g., ./assets/index.js)
   resolve: {
     alias: {
       '@': fileURLToPath(new URL('./src', import.meta.url)),
