@@ -20,7 +20,7 @@ function launchElectron(devUrl) {
   })
 
   electronProcess.on('close', (code) => {
-    // If process exited cleanly via user closing window, exit script
+    // If closed intentionally by exiting the window, exit script
     if (code !== null) {
       process.exit()
     }
@@ -28,7 +28,7 @@ function launchElectron(devUrl) {
 }
 
 async function startDev() {
-  // 1. Start Vite Dev Server
+  // 1. Start Vite dev server
   const server = await createServer({
     configFile: './vite.config.ts',
   })
@@ -39,21 +39,30 @@ async function startDev() {
 
   console.log(`[Vite] Dev server ready at ${devUrl}`)
 
-  // 2. Launch initial Electron process
-  launchElectron(devUrl)
-
-  // 3. Watch dist/electron directory for changes made by tsc -w
+  // 2. Watch dist/electron directory for changes from tsc -w
+  // The first compilation by tsc will trigger the initial window open
   const watchDir = path.resolve('dist/electron')
-  if (fs.existsSync(watchDir)) {
-    let debounceTimer
-    fs.watch(watchDir, { recursive: true }, () => {
+  let debounceTimer
+
+  // Ensure directory exists to watch
+  if (!fs.existsSync(watchDir)) {
+    fs.mkdirSync(watchDir, { recursive: true })
+  }
+
+  // Initial launch
+  // launchElectron(devUrl)
+
+  // Watch for rebuilds with debouncing to prevent multi-fire on fast disk writes
+  fs.watch(watchDir, { recursive: true }, (eventType, filename) => {
+    // Only restart on actual file changes, avoiding initial creation loops
+    if (filename && filename.endsWith('.js')) {
       clearTimeout(debounceTimer)
       debounceTimer = setTimeout(() => {
-        console.log('[Electron] File changes detected in main process. Restarting Electron...')
+        console.log('[Electron] Rebuilding main process...')
         launchElectron(devUrl)
-      }, 300)
-    })
-  }
+      }, 500)
+    }
+  })
 }
 
 startDev()
