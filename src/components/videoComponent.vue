@@ -5,7 +5,39 @@ import { VideoDetails } from '@/types/VideoDetails'
 const props = defineProps<{
   format: MediaFormat
   videoDetails: VideoDetails | null
+  audioId?: string | null
 }>()
+
+const emits = defineEmits<{
+  (e: 'listen'): void
+}>()
+
+const downloadVideo = async () => {
+  const bridge = (window as any).bridge
+
+  if (!bridge) {
+    return
+  }
+
+  if (!props.videoDetails) {
+    return
+  }
+
+  if (!props.videoDetails.url) {
+    return
+  }
+
+  if (!props.audioId) {
+    return
+  }
+
+  try {
+    emits('listen')
+    bridge.downloadVideo(props.videoDetails.url, props.format.format_id, props.audioId)
+  } catch (error: any) {
+    console.error('downloadVideo', error)
+  }
+}
 </script>
 
 <template>
@@ -31,23 +63,28 @@ const props = defineProps<{
         </div>
         <div class="text-zinc-900 text-xs">
           <span class="font-semibold pr-1">Size:</span>
-          <span>{{ props.format.filesize }}</span>
+          <span>{{ props.format.formattedFileSize }}</span>
         </div>
       </div>
 
       <div class="h-full flex items-center shrink-0">
-        <div class="p-2 rounded bg-sky-500 text-white text-xs">
+        <div
+          class="p-2 rounded bg-sky-500 text-white text-xs text-center max-w-20 min-w-20 text-center"
+        >
           {{ props.format.resolution }}
         </div>
       </div>
       <div class="h-full flex items-center shrink-0">
-        <div class="p-2 rounded bg-amber-500 text-white uppercase text-xs">
-          {{ props.format.vcodec }}
+        <div
+          class="p-2 rounded bg-amber-500 text-white uppercase text-xs min-w-12 max-w-12 text-center"
+        >
+          {{ props.format.formattedCodec }}
         </div>
       </div>
     </div>
 
     <button
+      @click="downloadVideo()"
       class="rounded bg-lime-500 shadow p-2 text-white cursor-pointer hover:bg-lime-400 active:inset-shadow-sm text-sm shrink-0"
     >
       Download

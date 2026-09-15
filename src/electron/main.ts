@@ -4,6 +4,7 @@ import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 import * as fs from 'node:fs'
 import { VideoInfo } from '@/types/VideoInfo'
+import { YtDlpProgress } from '@/types/YtDlpProgress'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -77,7 +78,7 @@ app.on('window-all-closed', () => {
   }
 })
 
-ipcMain.handle('get-video-info', async (event, url): Promise<VideoInfo> => {
+ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
   return new Promise((resolve, reject) => {
     const binary = getBinaryPath()
     const ytdlp = spawn(binary, ['--dump-json', '--no-playlist', url])
@@ -103,5 +104,105 @@ ipcMain.handle('get-video-info', async (event, url): Promise<VideoInfo> => {
         reject(new Error(errorData || `Process exited with code ${code}`))
       }
     })
+  })
+})
+
+const downloadsFolder = app.getPath('downloads')
+const outputTemplate = path.join(downloadsFolder, '%(title)s.%(ext)s')
+
+let lastReportedPercentage = -1
+let currentPhase = 'downloading-video' // starts with video
+
+ipcMain.on('downloadVideo', (event, payload) => {
+  const formatSelection = `${payload.videoFormatId}+${payload.audioFormatId}` // e.g., "313+251"
+
+  const args = [
+    '-f',
+    formatSelection,
+    '--merge-output-format',
+    'mp4',
+    '-o',
+    outputTemplate, // Tells yt-dlp exactly where to save it
+    '--newline', // Forces output on new lines for easier parsing
+    payload.url,
+  ]
+
+  console.log('args', args)
+
+  const binary = getBinaryPath()
+  const process = spawn(binary, args)
+
+  process.stdout.on('data', (data) => {
+    const output = data.toString()
+
+    // 1. Check if we reached the Merging phase
+    if (output.includes('[Merger]')) {
+      currentPhase = 'merging'
+      console.log(
+        JSON.stringify({
+          status: currentPhase,
+          message: 'Combining video and audio... please wait.',
+        }),
+      )
+      return // Exit early so we don't try to parse percentages
+    }
+
+    // 2. Parse download progress
+    const progressRegex =
+      /\[download\]\s+([\d\.]+)%\s+of\s+([^\s]+)\s+at\s+([^\s]+)\s+ETA\s+([^\s]+)/
+    const match = output.match(progressRegex)
+
+    if (match) {
+      const rawPercentage = parseFloat(match[1])
+      const size = match[2]
+      const speed = match[3]
+      const eta = match[4]
+
+      // 3. Detect transition from Video to Audio
+      // If the percentage suddenly drops from near 100% back to near 0%, the audio track started
+      if (lastReportedPercentage >= 95 && rawPercentage < 5) {
+        currentPhase = 'downloading-audio'
+      }
+
+      const currentFloor = Math.floor(rawPercentage)
+
+      // Only output if the whole number percentage changed (throttling)
+      if (currentFloor !== lastReportedPercentage) {
+        lastReportedPercentage = currentFloor
+
+        const progressData = {
+          status: currentPhase,
+          percentage: rawPercentage,
+          size: size,
+          speed: speed,
+          eta: eta,
+        }
+
+        // console.log(JSON.stringify(progressData))
+
+        // In Electron, send this via IPC:
+        event.sender.send('downloadProgress', progressData)
+      }
+    }
+  })
+
+  process.on('close', (code) => {
+    const progressData: YtDlpProgress = {
+      status: 'completed',
+      message: '',
+    }
+    if (code === 0) {
+      progressData.status = 'completed'
+      progressData.message = 'Download and merge successful!'
+    } else {
+      progressData.status = 'completed'
+      progressData.message = `Process exited with code ${code}`
+    }
+
+    // Reset trackers for the next download
+    lastReportedPercentage = -1
+    currentPhase = 'downloading-video'
+
+    event.sender.send('downloadProgress', progressData)
   })
 })

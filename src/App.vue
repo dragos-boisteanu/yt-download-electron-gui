@@ -4,18 +4,21 @@ import VideoComponent from '@/components/videoComponent.vue'
 import { VideoInfo } from '@/types/VideoInfo'
 import { MediaFormat } from '@/types/MediaFormat'
 import { VideoDetails } from '@/types/VideoDetails'
+import { YtDlpProgress } from '@/types/YtDlpProgress'
+import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
+import formatBytesToMB from '@/helpers/formatBytesToMB'
 
 const isLoadingVideoData = ref<boolean>(false)
 
 const videoFormats = ref<MediaFormat[]>([])
 const videoDetails = ref<VideoDetails | null>(null)
 
+const audioFormats = ref<MediaFormat[]>([])
+const highestAudioFormat = ref<string>('')
+
 const videoUrl = ref<string>('')
 const requestVideoInfo = async () => {
-  // eslint-disable-next-line
   const bridge = (window as any).bridge
-
-  console.log('bridge', bridge)
   if (!bridge) {
     return
   }
@@ -34,7 +37,7 @@ const requestVideoInfo = async () => {
     }
     // const audioFormats: MediaFormat = info.formats.filter(format => format.video_ext === 'none')
     videoFormats.value = info.formats
-      .filter((format) => format.audio_ext === 'none')
+      .filter((format) => format.audio_ext === 'none' && format.filesize)
       .sort((a: MediaFormat, b: MediaFormat) => {
         // Primary: Compare height (e.g., 2400 vs 1080)
         const heightA = a.height ?? 0
@@ -48,17 +51,49 @@ const requestVideoInfo = async () => {
         const fpsB = b.fps ?? 0
         return fpsB - fpsA // Higher FPS first
       })
+      .map((format) => {
+        return {
+          ...format,
+          formattedCodec: getFriendlyCodecName(format.vcodec),
+          formattedFileSize: formatBytesToMB(format.filesize),
+        }
+      })
+
+    audioFormats.value = info.formats.filter((format) => format.audio_ext !== 'none')
+
+    const bestAudioFormat = audioFormats.value.at(-1)
+    if (bestAudioFormat) {
+      highestAudioFormat.value = bestAudioFormat.format_id
+    }
 
     videoDetails.value = {
       title: info.title,
-      duration: info.duration,
+      duration: info.duration_string,
       thumbnail: info.thumbnail,
+      url: info.webpage_url,
     }
+
+    console.log('videoDetails', videoDetails.value)
   } catch (error) {
     console.error('loadVideoData', error)
   } finally {
     isLoadingVideoData.value = false
   }
+}
+
+const registerDownloadProgressListener = () => {
+  const bridge = (window as any).bridge
+  if (!bridge) {
+    return
+  }
+
+  const removeListener = bridge.onDownloadProgress((progress: YtDlpProgress) => {
+    console.log('progress', progress)
+
+    if (progress.status === 'completed' || progress.status === 'error') {
+      removeListener()
+    }
+  })
 }
 </script>
 
@@ -98,7 +133,9 @@ const requestVideoInfo = async () => {
           v-for="format in videoFormats"
           :key="format.format_id"
           :videoDetails="videoDetails"
+          :audioId="highestAudioFormat"
           :format="format"
+          @listen="registerDownloadProgressListener()"
         />
       </div>
     </div>

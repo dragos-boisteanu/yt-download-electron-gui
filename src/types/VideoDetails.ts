@@ -1,5 +1,6 @@
 export interface VideoDetails {
   title: string
-  duration?: number | null
+  url?: string | null
+  duration?: string | null
   thumbnail?: string | null
 }

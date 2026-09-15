@@ -10,6 +10,7 @@ export interface MediaFormat {
 
   acodec?: string | null
   vcodec?: string | null
+  formattedCodec?: string | null
 
   url: string
   manifest_url?: string | null
@@ -34,6 +35,7 @@ export interface MediaFormat {
 
   filesize?: number | null
   filesize_approx?: number | null
+  formattedFileSize?: string
 
   language?: string | null
   language_preference?: number | null
