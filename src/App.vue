@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 import VideoComponent from '@/components/videoComponent.vue'
 import { VideoInfo } from '@/types/VideoInfo'
 import { MediaFormat } from '@/types/MediaFormat'
@@ -9,6 +9,7 @@ import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
 import formatBytesToMB from '@/helpers/formatBytesToMB'
 import { get } from 'idb-keyval'
 import { DownloadsHistory } from '@/types/DownloadsHistory'
+import ProgressBarComponent from '@/components/progressBarComponent.vue'
 
 const isLoadingVideoData = ref<boolean>(false)
 
@@ -21,6 +22,10 @@ const audioFormats = ref<MediaFormat[]>([])
 const highestAudioFormat = ref<MediaFormat | undefined>(null)
 
 const selectedTab = ref<number>(1)
+
+const percentage = ref<number>(0)
+const downloadState = ref<string>('')
+const isDownloading = ref<boolean>(false)
 
 const videoUrl = ref<string>('')
 const requestVideoInfo = async () => {
@@ -91,19 +96,32 @@ const registerDownloadProgressListener = () => {
     return
   }
 
-  const removeListener = bridge.onDownloadProgress((progress: YtDlpProgress) => {
+  bridge.onDownloadProgress((progress: YtDlpProgress) => {
     console.log('progress', progress)
 
+    if (progress.percentage !== undefined && progress.percentage > 0) {
+      percentage.value = progress.percentage
+    }
+
+    if (progress.message) {
+      downloadState.value = progress.message
+    }
+
     if (progress.status === 'completed' || progress.status === 'error') {
-      removeListener()
+      isDownloading.value = false
     }
   })
+}
+registerDownloadProgressListener()
+
+const videoDownloadStarted = () => {
+  isDownloading.value = true
+  downloadState.value = 'Initiating...'
 }
 
 const getHistory = async () => {
   try {
     const downloads = await get('downloadsHistory')
-    console.log('downloads', downloads)
 
     if (downloads) {
       downloadsHistory.value = downloads
@@ -174,7 +192,8 @@ getHistory()
             :videoDetails="videoDetails"
             :audioFormat="highestAudioFormat"
             :format="format"
-            @listen="registerDownloadProgressListener()"
+            :isDownloading="isDownloading"
+            @download="videoDownloadStarted()"
           />
         </template>
 
@@ -185,10 +204,15 @@ getHistory()
             :videoDetails="historyItem.videoDetails"
             :audioFormat="historyItem.audioFormat"
             :format="historyItem.videoFormat"
-            @listen="registerDownloadProgressListener()"
+            :isDownloading="isDownloading"
+            @download="videoDownloadStarted()"
           />
         </template>
       </div>
+    </div>
+
+    <div class="w-full flex-0">
+      <progress-bar-component :percentage="percentage" :text="downloadState" />
     </div>
   </div>
 </template>

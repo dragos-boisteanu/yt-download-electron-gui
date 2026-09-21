@@ -110,10 +110,11 @@ ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
 const downloadsFolder = app.getPath('downloads')
 const outputTemplate = path.join(downloadsFolder, '%(title)s.%(ext)s')
 
-let lastReportedPercentage = -1
-let currentPhase = 'downloading-video' // starts with video
-
 ipcMain.on('downloadVideo', (event, payload) => {
+  let currentPhase = 'video' // 'video' | 'audio' | 'merging'
+  let lastReportedRawPercentage = 0
+  let lastReportedFloor = -1
+
   const formatSelection = `${payload.videoFormatId}+${payload.audioFormatId}` // e.g., "313+251"
 
   const args = [
@@ -133,19 +134,23 @@ ipcMain.on('downloadVideo', (event, payload) => {
   process.stdout.on('data', (data) => {
     const output = data.toString()
 
-    // 1. Check if we reached the Merging phase
+    // Detect Merging Phase (FFmpeg phase)
     if (output.includes('[Merger]')) {
-      currentPhase = 'merging'
-      console.log(
-        JSON.stringify({
-          status: currentPhase,
+      if (currentPhase !== 'merging') {
+        currentPhase = 'merging'
+        event.sender.send('downloadProgress', {
+          status: 'processing',
           message: 'Combining video and audio... please wait.',
-        }),
-      )
-      return // Exit early so we don't try to parse percentages
+          percentage: 99,
+          size: 'N/A',
+          speed: 'N/A',
+          eta: 'N/A',
+        })
+      }
+      return
     }
 
-    // 2. Parse download progress
+    // Parse download progress lines
     const progressRegex =
       /\[download\]\s+([\d\.]+)%\s+of\s+([^\s]+)\s+at\s+([^\s]+)\s+ETA\s+([^\s]+)/
     const match = output.match(progressRegex)
@@ -156,51 +161,58 @@ ipcMain.on('downloadVideo', (event, payload) => {
       const speed = match[3]
       const eta = match[4]
 
-      // 3. Detect transition from Video to Audio
-      // If the percentage suddenly drops from near 100% back to near 0%, the audio track started
-      if (lastReportedPercentage >= 95 && rawPercentage < 5) {
-        currentPhase = 'downloading-audio'
+      // Detect transition from Video (1st download) to Audio (2nd download)
+      if (currentPhase === 'video' && lastReportedRawPercentage >= 90 && rawPercentage < 10) {
+        currentPhase = 'audio'
+      }
+      lastReportedRawPercentage = rawPercentage
+
+      // Map raw progress to a unified 0-98% scale
+      let unifiedPercentage = 0
+      let statusMessage = ''
+
+      if (currentPhase === 'video') {
+        unifiedPercentage = rawPercentage * 0.9 // Maps 0-100% -> 0-90%
+        statusMessage = 'Downloading video (1/2)...'
+      } else if (currentPhase === 'audio') {
+        unifiedPercentage = 90 + rawPercentage * 0.08 // Maps 0-100% -> 90-98%
+        statusMessage = 'Downloading audio (2/2)...'
       }
 
-      const currentFloor = Math.floor(rawPercentage)
+      const currentFloor = Math.floor(unifiedPercentage)
 
-      // Only output if the whole number percentage changed (throttling)
-      if (currentFloor !== lastReportedPercentage) {
-        lastReportedPercentage = currentFloor
+      // Throttle: Send IPC update only when whole number changes
+      if (currentFloor !== lastReportedFloor) {
+        lastReportedFloor = currentFloor
 
-        const progressData = {
-          status: currentPhase,
-          percentage: rawPercentage,
+        event.sender.send('downloadProgress', {
+          status: 'downloading',
+          message: statusMessage,
+          percentage: parseFloat(unifiedPercentage.toFixed(1)),
           size: size,
           speed: speed,
           eta: eta,
-        }
-
-        // console.log(JSON.stringify(progressData))
-
-        // In Electron, send this via IPC:
-        event.sender.send('downloadProgress', progressData)
+        })
       }
     }
   })
 
   process.on('close', (code) => {
-    const progressData: YtDlpProgress = {
-      status: 'completed',
-      message: '',
-    }
     if (code === 0) {
-      progressData.status = 'completed'
-      progressData.message = 'Download and merge successful!'
+      event.sender.send('downloadProgress', {
+        status: 'completed',
+        message: 'Download complete!',
+        percentage: 100,
+        size: 'N/A',
+        speed: '0B/s',
+        eta: '00:00',
+      })
     } else {
-      progressData.status = 'completed'
-      progressData.message = `Process exited with code ${code}`
+      event.sender.send('downloadProgress', {
+        status: 'error',
+        message: `Download failed with exit code ${code}`,
+        percentage: 0,
+      })
     }
-
-    // Reset trackers for the next download
-    lastReportedPercentage = -1
-    currentPhase = 'downloading-video'
-
-    event.sender.send('downloadProgress', progressData)
   })
 })

@@ -9,10 +9,11 @@ const props = defineProps<{
   format: MediaFormat
   videoDetails: VideoDetails | null
   audioFormat?: MediaFormat
+  isDownloading: boolean
 }>()
 
 const emits = defineEmits<{
-  (e: 'listen'): void
+  (e: 'download'): void
 }>()
 
 const downloadVideo = async () => {
@@ -35,7 +36,7 @@ const downloadVideo = async () => {
   }
 
   try {
-    emits('listen')
+    emits('download')
     bridge.downloadVideo(
       props.videoDetails.url,
       props.format.format_id,
@@ -122,8 +123,9 @@ const downloadVideo = async () => {
     </div>
 
     <button
+      :disabled="isDownloading"
       @click="downloadVideo()"
-      class="rounded bg-lime-500 shadow p-2 text-white cursor-pointer hover:bg-lime-400 active:inset-shadow-sm text-sm shrink-0"
+      class="rounded bg-lime-500 shadow p-2 text-white cursor-pointer hover:bg-lime-400 active:inset-shadow-sm text-sm shrink-0 disabled:bg-neutral-400"
     >
       Download
     </button>
