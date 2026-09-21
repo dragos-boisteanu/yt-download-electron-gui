@@ -127,8 +127,6 @@ ipcMain.on('downloadVideo', (event, payload) => {
     payload.url,
   ]
 
-  console.log('args', args)
-
   const binary = getBinaryPath()
   const process = spawn(binary, args)
 

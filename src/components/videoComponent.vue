@@ -1,11 +1,14 @@
 <script setup lang="ts">
 import { MediaFormat } from '@/types/MediaFormat'
 import { VideoDetails } from '@/types/VideoDetails'
+import { update } from 'idb-keyval'
+import { DownloadsHistory } from '@/types/DownloadsHistory'
+import { toRaw } from 'vue'
 
 const props = defineProps<{
   format: MediaFormat
   videoDetails: VideoDetails | null
-  audioId?: string | null
+  audioFormat?: MediaFormat
 }>()
 
 const emits = defineEmits<{
@@ -27,13 +30,48 @@ const downloadVideo = async () => {
     return
   }
 
-  if (!props.audioId) {
+  if (!props.audioFormat) {
     return
   }
 
   try {
     emits('listen')
-    bridge.downloadVideo(props.videoDetails.url, props.format.format_id, props.audioId)
+    bridge.downloadVideo(
+      props.videoDetails.url,
+      props.format.format_id,
+      props.audioFormat.format_id,
+    )
+
+    update('downloadsHistory', (value) => {
+      if (!(props.videoDetails && props.audioFormat && props.format)) {
+        return
+      }
+
+      const newHistoryEntry: DownloadsHistory = {
+        videoDetails: toRaw(props.videoDetails),
+        audioFormat: toRaw(props.audioFormat),
+        videoFormat: toRaw(props.format),
+      }
+
+      if (value) {
+        const entryIndex = value.findIndex(
+          (entry: DownloadsHistory) => entry.videoDetails.url === newHistoryEntry.videoDetails.url,
+        )
+
+        if (entryIndex === -1) {
+          value.push(newHistoryEntry)
+        } else {
+          value.splice(entryIndex, 1, newHistoryEntry)
+        }
+      } else {
+        const history: DownloadsHistory[] = []
+        history.push(newHistoryEntry)
+
+        value = history
+      }
+
+      return value
+    }).catch((error) => console.error('getDownloadsHistory', error))
   } catch (error: any) {
     console.error('downloadVideo', error)
   }

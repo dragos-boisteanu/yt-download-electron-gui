@@ -7,14 +7,20 @@ import { VideoDetails } from '@/types/VideoDetails'
 import { YtDlpProgress } from '@/types/YtDlpProgress'
 import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
 import formatBytesToMB from '@/helpers/formatBytesToMB'
+import { get } from 'idb-keyval'
+import { DownloadsHistory } from '@/types/DownloadsHistory'
 
 const isLoadingVideoData = ref<boolean>(false)
 
 const videoFormats = ref<MediaFormat[]>([])
 const videoDetails = ref<VideoDetails | null>(null)
 
+const downloadsHistory = ref<DownloadsHistory[]>([])
+
 const audioFormats = ref<MediaFormat[]>([])
-const highestAudioFormat = ref<string>('')
+const highestAudioFormat = ref<MediaFormat | undefined>(null)
+
+const selectedTab = ref<number>(1)
 
 const videoUrl = ref<string>('')
 const requestVideoInfo = async () => {
@@ -31,7 +37,6 @@ const requestVideoInfo = async () => {
       throw new Error('No video info')
     }
 
-    console.log('info', info)
     if (!info.formats) {
       throw new Error('No formats')
     }
@@ -61,10 +66,7 @@ const requestVideoInfo = async () => {
 
     audioFormats.value = info.formats.filter((format) => format.audio_ext !== 'none')
 
-    const bestAudioFormat = audioFormats.value.at(-1)
-    if (bestAudioFormat) {
-      highestAudioFormat.value = bestAudioFormat.format_id
-    }
+    highestAudioFormat.value = audioFormats.value.at(-1)
 
     videoDetails.value = {
       title: info.title,
@@ -73,7 +75,9 @@ const requestVideoInfo = async () => {
       url: info.webpage_url,
     }
 
-    console.log('videoDetails', videoDetails.value)
+    if (videoDetails.value && audioFormats.value.length > 0) {
+      selectedTab.value = 0
+    }
   } catch (error) {
     console.error('loadVideoData', error)
   } finally {
@@ -95,6 +99,21 @@ const registerDownloadProgressListener = () => {
     }
   })
 }
+
+const getHistory = async () => {
+  try {
+    const downloads = await get('downloadsHistory')
+    console.log('downloads', downloads)
+
+    if (downloads) {
+      downloadsHistory.value = downloads
+    }
+  } catch (error) {
+    console.error('getHistory', error)
+  }
+}
+
+getHistory()
 </script>
 
 <template>
@@ -123,20 +142,52 @@ const registerDownloadProgressListener = () => {
     <div class="flex-1 flex flex-col min-h-0">
       <!-- Tabs (Fixed height, won't shrink) -->
       <div class="flex items-center gap-x-2 shrink-0">
-        <div class="p-2 text-sm text-zinc-900 font-semibold">Results</div>
-        <div class="p-2 text-sm text-zinc-600 cursor-pointer hover:text-zinc-800">History</div>
+        <div
+          @click="selectedTab = 0"
+          class="p-2 text-sm text-zinc-900"
+          v-if="videoFormats.length > 0"
+          :class="{
+            'font-semibold': selectedTab === 0,
+            'cursor-pointer': selectedTab !== 0,
+          }"
+        >
+          Results
+        </div>
+        <div
+          @click="selectedTab = 1"
+          class="p-2 text-sm text-zinc-600 hover:text-zinc-800"
+          :class="{
+            'font-semibold': selectedTab === 1,
+            'cursor-pointer': selectedTab !== 1,
+          }"
+        >
+          History
+        </div>
       </div>
 
       <!-- 3. Results Container: Takes remaining space and enables independent vertical scroll -->
       <div class="w-full flex-1 min-h-0 inset-shadow-sm rounded-lg bg-zinc-100 overflow-y-auto p-2">
-        <video-component
-          v-for="format in videoFormats"
-          :key="format.format_id"
-          :videoDetails="videoDetails"
-          :audioId="highestAudioFormat"
-          :format="format"
-          @listen="registerDownloadProgressListener()"
-        />
+        <template v-if="selectedTab === 0">
+          <video-component
+            v-for="format in videoFormats"
+            :key="format.format_id"
+            :videoDetails="videoDetails"
+            :audioFormat="highestAudioFormat"
+            :format="format"
+            @listen="registerDownloadProgressListener()"
+          />
+        </template>
+
+        <template v-if="selectedTab === 1">
+          <video-component
+            v-for="historyItem in downloadsHistory"
+            :key="historyItem.videoFormat.format_id"
+            :videoDetails="historyItem.videoDetails"
+            :audioFormat="historyItem.audioFormat"
+            :format="historyItem.videoFormat"
+            @listen="registerDownloadProgressListener()"
+          />
+        </template>
       </div>
     </div>
   </div>
