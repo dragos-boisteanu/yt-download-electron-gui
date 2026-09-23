@@ -141,7 +141,7 @@ getHistory()
 
 <template>
   <!-- 1. Change size-full to h-screen (or h-dvh) and overflow-hidden to constrain page height -->
-  <div class="flex h-screen w-full flex-col gap-y-4 overflow-hidden bg-zinc-50 p-4">
+  <div class="flex h-screen w-full flex-col gap-y-2 overflow-hidden bg-zinc-50 p-4">
     <!-- Header Input Section -->
     <div
       class="flex w-full shrink-0 items-center gap-x-2 rounded-lg bg-zinc-100 p-2 inset-shadow-sm"
