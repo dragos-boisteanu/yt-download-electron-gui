@@ -4,7 +4,6 @@ import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 import * as fs from 'node:fs'
 import { VideoInfo } from '@/types/VideoInfo'
-import { YtDlpProgress } from '@/types/YtDlpProgress'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -54,6 +53,8 @@ const createMainWindow = () => {
   const window = new BrowserWindow({
     width: 1280,
     height: 720,
+    minWidth: 480,
+    minHeight: 680,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,

@@ -3,7 +3,8 @@ import { MediaFormat } from '@/types/MediaFormat'
 import { VideoDetails } from '@/types/VideoDetails'
 import { update } from 'idb-keyval'
 import { DownloadsHistory } from '@/types/DownloadsHistory'
-import { toRaw } from 'vue'
+import { ref, toRaw } from 'vue'
+import { vRipple } from '@/directives/vRipple'
 
 const props = defineProps<{
   format: MediaFormat
@@ -80,55 +81,61 @@ const downloadVideo = async () => {
 </script>
 
 <template>
-  <div class="rounded w-full bg-zinc-50 my-2 p-2 hover:shadow flex items-center gap-x-4">
-    <div class="h-16 w-26 bg-zinc-500 rounded-lg shrink-0">
-      <img
-        class="object-fill size-full rounded-lg"
-        :src="props.videoDetails?.thumbnail ? props.videoDetails?.thumbnail : ''"
-      />
-    </div>
-
-    <!-- Key fix: min-w-0 stops flex child from growing past wrapper -->
-    <div class="flex items-center gap-x-4 flex-1 min-w-0">
-      <!-- Key fix: min-w-0 + truncate or line-clamp -->
-      <div class="flex-1 min-w-0 flex flex-col justify-start gap-y-0.5">
-        <!-- Truncates to 1 line with ellipsis -->
-        <div class="text-zinc-900 text-sm font-semibold truncate">
-          {{ props.videoDetails?.title }}
-        </div>
-        <div class="text-zinc-900 text-xs">
-          <span class="font-semibold pr-1">Duration:</span>
-          <span> {{ props.videoDetails?.duration }}</span>
-        </div>
-        <div class="text-zinc-900 text-xs">
-          <span class="font-semibold pr-1">Size:</span>
-          <span>{{ props.format.formattedFileSize }}</span>
-        </div>
+  <div class="my-2 flex w-full flex-wrap items-center gap-4 rounded bg-zinc-50 p-2 hover:shadow">
+    <div class="flex min-w-96 flex-1 items-start gap-x-4">
+      <div class="h-16 w-26 rounded-lg bg-zinc-500">
+        <img
+          class="size-full rounded-lg object-cover"
+          :src="props.videoDetails?.thumbnail ? props.videoDetails?.thumbnail : ''"
+        />
       </div>
 
-      <div class="h-full flex items-center shrink-0">
+      <!-- Key fix: min-w-0 stops flex child from growing past wrapper -->
+      <div class="flex min-w-0 flex-1 items-center gap-x-4">
+        <!-- Key fix: min-w-0 + truncate or line-clamp -->
+        <div class="flex min-w-0 flex-1 flex-col justify-start gap-y-0.5">
+          <!-- Truncates to 1 line with ellipsis -->
+          <div class="truncate text-sm font-semibold text-zinc-900">
+            {{ props.videoDetails?.title }}
+          </div>
+          <div class="flex items-center gap-x-2">
+            <div class="text-xs text-zinc-900">
+              <span class="pr-1 font-semibold">Duration:</span>
+              <span> {{ props.videoDetails?.duration }}</span>
+            </div>
+            <div class="text-xs text-zinc-900">
+              <span class="pr-1 font-semibold">Size:</span>
+              <span>{{ props.format.formattedFileSize }}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="flex w-full items-center justify-between gap-4 md:w-fit">
+      <div class="flex items-center gap-x-4">
         <div
-          class="p-2 rounded bg-sky-500 text-white text-xs text-center max-w-20 min-w-20 text-center"
+          class="w-20 rounded-md border border-orange-100 bg-orange-50 px-2 py-1 text-center text-xs text-orange-700"
         >
           {{ props.format.resolution }}
         </div>
-      </div>
-      <div class="h-full flex items-center shrink-0">
+
         <div
-          class="p-2 rounded bg-amber-500 text-white uppercase text-xs min-w-12 max-w-12 text-center"
+          class="w-12 justify-center rounded-md bg-slate-100 px-2 py-1 text-center text-xs font-bold text-slate-600"
         >
           {{ props.format.formattedCodec }}
         </div>
       </div>
-    </div>
 
-    <button
-      :disabled="isDownloading"
-      @click="downloadVideo()"
-      class="rounded bg-lime-500 shadow p-2 text-white cursor-pointer hover:bg-lime-400 active:inset-shadow-sm text-sm shrink-0 disabled:bg-neutral-400"
-    >
-      Download
-    </button>
+      <button
+        :disabled="isDownloading"
+        @click="downloadVideo()"
+        v-ripple
+        class="shrink-0 cursor-pointer rounded bg-sky-600 p-2 text-sm text-white shadow transition-colors hover:bg-sky-500 disabled:cursor-default disabled:bg-neutral-400"
+      >
+        Download
+      </button>
+    </div>
   </div>
 </template>
 

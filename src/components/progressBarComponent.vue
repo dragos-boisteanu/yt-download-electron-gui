@@ -15,7 +15,7 @@ const displayText = computed(() => {
 })
 </script>
 <template>
-  <div class="relative h-6 w-full overflow-hidden rounded-lg bg-sky-100 font-semibold text-xs">
+  <div class="relative h-6 w-full overflow-hidden rounded-lg bg-sky-100 text-xs font-semibold">
     <!-- Bottom Layer: Light background + Dark text -->
     <div class="absolute inset-0 flex items-center justify-center text-sky-950">
       {{ displayText }}

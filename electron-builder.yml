@@ -7,7 +7,7 @@ directories:
   buildResources: assets
 
 files:
-  - "dist/**/*"
+  - 'dist/**/*'
 
 asar: true
 
@@ -16,7 +16,7 @@ win:
     - target: nsis
       arch:
         - x64
-  artifactName: "${productName}-Setup-${version}.${ext}"
+  artifactName: '${productName}-Setup-${version}.${ext}'
 
 mac:
   target:
@@ -25,7 +25,7 @@ mac:
         - x64
         - arm64
   category: public.app-category.utilities
-  artifactName: "${productName}-${version}-${arch}.${ext}"
+  artifactName: '${productName}-${version}-${arch}.${ext}'
 
 linux:
   target:
@@ -33,11 +33,11 @@ linux:
       arch:
         - x64
   category: Utility
-  artifactName: "${productName}-${version}.${ext}"
+  artifactName: '${productName}-${version}.${ext}'
 
 nsis:
   oneClick: false
   allowToChangeInstallationDirectory: true
   createDesktopShortcut: false
   createStartMenuShortcut: false
-  shortcutName: "YT Download"
+  shortcutName: 'YT Download'

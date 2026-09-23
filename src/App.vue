@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from 'vue'
+import { computed, nextTick, ref } from 'vue'
 import VideoComponent from '@/components/videoComponent.vue'
 import { VideoInfo } from '@/types/VideoInfo'
 import { MediaFormat } from '@/types/MediaFormat'
@@ -10,6 +10,8 @@ import formatBytesToMB from '@/helpers/formatBytesToMB'
 import { get } from 'idb-keyval'
 import { DownloadsHistory } from '@/types/DownloadsHistory'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
+import { MagnifyingGlassIcon } from '@heroicons/vue/24/solid'
+import { vRipple } from '@/directives/vRipple'
 
 const isLoadingVideoData = ref<boolean>(false)
 
@@ -27,6 +29,10 @@ const percentage = ref<number>(0)
 const downloadState = ref<string>('')
 const isDownloading = ref<boolean>(false)
 
+const isSearchDisabled = computed(() => {
+  return isLoadingVideoData.value || isDownloading.value
+})
+
 const videoUrl = ref<string>('')
 const requestVideoInfo = async () => {
   const bridge = (window as any).bridge
@@ -36,6 +42,7 @@ const requestVideoInfo = async () => {
 
   try {
     isLoadingVideoData.value = true
+
     const info: VideoInfo = await bridge.getVideoInfo(videoUrl.value)
 
     if (!info) {
@@ -97,8 +104,6 @@ const registerDownloadProgressListener = () => {
   }
 
   bridge.onDownloadProgress((progress: YtDlpProgress) => {
-    console.log('progress', progress)
-
     if (progress.percentage !== undefined && progress.percentage > 0) {
       percentage.value = progress.percentage
     }
@@ -136,30 +141,34 @@ getHistory()
 
 <template>
   <!-- 1. Change size-full to h-screen (or h-dvh) and overflow-hidden to constrain page height -->
-  <div class="h-screen w-full flex flex-col bg-zinc-50 p-4 gap-y-4 overflow-hidden">
+  <div class="flex h-screen w-full flex-col gap-y-4 overflow-hidden bg-zinc-50 p-4">
     <!-- Header Input Section -->
-    <div class="w-full flex items-center gap-x-4 shrink-0">
-      <div class="rounded shadow bg-zinc-100 p-2 flex-1">
-        <input
-          v-model="videoUrl"
-          type="text"
-          class="size-full outline-0 text-zinc-600 text-sm"
-          placeholder="Video link"
-        />
-      </div>
+    <div
+      class="flex w-full shrink-0 items-center gap-x-2 rounded-lg bg-zinc-100 p-2 inset-shadow-sm"
+    >
+      <MagnifyingGlassIcon class="size-6 text-zinc-400" />
+      <input
+        v-model="videoUrl"
+        type="text"
+        class="size-full rounded-lg p-2 text-sm text-zinc-700 outline-0"
+        placeholder="Paste YouTube video link"
+      />
+
       <button
-        @click="requestVideoInfo"
-        class="rounded bg-lime-500 shadow p-2 text-white cursor-pointer hover:bg-lime-400 active:inset-shadow-sm disabled:bg-neutral-400"
-        :disabled="isLoadingVideoData"
+        @click="requestVideoInfo()"
+        v-ripple
+        class="w-20 cursor-pointer rounded bg-sky-600 px-4 py-2 text-center text-sm text-white shadow transition-colors hover:bg-sky-500 active:bg-sky-700 disabled:cursor-default disabled:bg-neutral-400"
+        :class="{ '!cursor-wait': isLoadingVideoData }"
+        :disabled="isSearchDisabled"
       >
         Search
       </button>
     </div>
 
     <!-- 2. Section Wrapper: min-h-0 lets flex-1 shrink properly -->
-    <div class="flex-1 flex flex-col min-h-0">
+    <div class="flex min-h-0 flex-1 flex-col">
       <!-- Tabs (Fixed height, won't shrink) -->
-      <div class="flex items-center gap-x-2 shrink-0">
+      <div class="flex shrink-0 items-center gap-x-2">
         <div
           @click="selectedTab = 0"
           class="p-2 text-sm text-zinc-900"
@@ -184,7 +193,9 @@ getHistory()
       </div>
 
       <!-- 3. Results Container: Takes remaining space and enables independent vertical scroll -->
-      <div class="w-full flex-1 min-h-0 inset-shadow-sm rounded-lg bg-zinc-100 overflow-y-auto p-2">
+      <div
+        class="min-h-0 w-full flex-1 scrollbar-gutter-both overflow-y-auto rounded-lg bg-zinc-100 p-2 inset-shadow-sm"
+      >
         <template v-if="selectedTab === 0">
           <video-component
             v-for="format in videoFormats"
