@@ -57,7 +57,7 @@ const toggleFullScreen = () => {
     <button
       @click="closeApp"
       v-ripple
-      class="inset-shadow rounded-lg p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
+      class="inset-shadow rounded-lg p-2 transition-colors ease-in-out hover:bg-red-600 hover:text-white active:bg-red-700 active:text-white"
     >
       <XMarkIcon class="size-5" />
     </button>
