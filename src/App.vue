@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, nextTick, ref } from 'vue'
+import { computed, onUnmounted, ref } from 'vue'
 import VideoComponent from '@/components/videoComponent.vue'
 import { VideoInfo } from '@/types/VideoInfo'
 import { MediaFormat } from '@/types/MediaFormat'
@@ -12,6 +12,8 @@ import { DownloadsHistory } from '@/types/DownloadsHistory'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/solid'
 import { vRipple } from '@/directives/vRipple'
+import WindowActions from '@/components/window-actions.vue'
+import SettingsComponent from '@/components/settings-component.vue'
 
 const isLoadingVideoData = ref<boolean>(false)
 
@@ -37,6 +39,10 @@ const videoUrl = ref<string>('')
 const requestVideoInfo = async () => {
   const bridge = (window as any).bridge
   if (!bridge) {
+    return
+  }
+
+  if (!videoUrl.value) {
     return
   }
 
@@ -136,12 +142,45 @@ const getHistory = async () => {
   }
 }
 
+const isMaximized = ref<boolean>(false)
+let removeListener: (() => void) | null = null
+const registerElectronListeners = () => {
+  const bridge = (window as any).bridge
+  if (!bridge) {
+    return
+  }
+
+  removeListener = bridge.on('app', (data: any) => {
+    switch (data.action) {
+      case 'maximize': {
+        isMaximized.value = true
+        break
+      }
+      case 'unmaximize': {
+        isMaximized.value = false
+        break
+      }
+    }
+  })
+}
+
+onUnmounted(() => {
+  if (removeListener) {
+    removeListener()
+  }
+})
+registerElectronListeners()
+
 getHistory()
 </script>
 
 <template>
   <!-- 1. Change size-full to h-screen (or h-dvh) and overflow-hidden to constrain page height -->
-  <div class="flex h-screen w-full flex-col gap-y-2 overflow-hidden bg-zinc-50 p-4">
+  <div class="flex h-screen w-full flex-col gap-y-2 overflow-hidden bg-zinc-50 p-4 pt-2">
+    <div class="flex w-full items-center justify-between">
+      <settings-component />
+      <window-actions :isMaximized="isMaximized" />
+    </div>
     <!-- Header Input Section -->
     <div
       class="flex w-full shrink-0 items-center gap-x-2 rounded-lg bg-zinc-100 p-2 inset-shadow-sm"

@@ -15,4 +15,20 @@ contextBridge.exposeInMainWorld('bridge', {
       ipcRenderer.removeListener('downloadProgress', listener)
     }
   },
+
+  closeApp: (): void => ipcRenderer.send('closeApp'),
+  minimize: (): void => ipcRenderer.send('minimize'),
+  toggleFullScreen: (currentState: boolean): void =>
+    ipcRenderer.send('toggleFullScreen', currentState),
+
+  on: (type: string, callback: (data: any) => void) => {
+    const listener = (_event: any, data: any) => callback(data)
+
+    ipcRenderer.on(type, listener)
+
+    // Return a cleanup function to prevent memory leaks
+    return () => {
+      ipcRenderer.removeListener(type, listener)
+    }
+  },
 })

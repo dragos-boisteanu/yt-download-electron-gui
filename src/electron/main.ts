@@ -49,12 +49,14 @@ function getBinaryPath() {
   return binaryPath
 }
 
+let mainWindow: BrowserWindow | null = null
 const createMainWindow = () => {
-  const window = new BrowserWindow({
+  mainWindow = new BrowserWindow({
     width: 1280,
     height: 720,
     minWidth: 480,
     minHeight: 680,
+    frame: false,
     webPreferences: {
       preload: path.join(__dirname, 'preload.js'),
       nodeIntegration: false,
@@ -65,10 +67,32 @@ const createMainWindow = () => {
   const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
   if (devServerUrl) {
-    window.loadURL(devServerUrl)
+    mainWindow.loadURL(devServerUrl)
   } else {
-    window.loadFile(path.join(__dirname, '../index.html'))
+    mainWindow.loadFile(path.join(__dirname, '../index.html'))
   }
+
+  mainWindow.webContents.openDevTools()
+
+  mainWindow.on('maximize', () => {
+    if (!mainWindow) {
+      return
+    }
+
+    mainWindow.webContents.send('app', {
+      action: 'maximize',
+    })
+  })
+
+  mainWindow.on('unmaximize', () => {
+    if (!mainWindow) {
+      return
+    }
+
+    mainWindow.webContents.send('app', {
+      action: 'unmaximize',
+    })
+  })
 }
 
 app.whenReady().then(createMainWindow)
@@ -216,4 +240,32 @@ ipcMain.on('downloadVideo', (event, payload) => {
       })
     }
   })
+})
+
+ipcMain.on('closeApp', () => {
+  app.quit()
+})
+
+ipcMain.on('minimize', () => {
+  if (!mainWindow) {
+    return
+  }
+
+  if (!mainWindow.minimizable) {
+    return
+  }
+
+  mainWindow.minimize()
+})
+
+ipcMain.on('toggleFullScreen', (event: any, currentState: boolean) => {
+  if (!mainWindow) {
+    return
+  }
+
+  if (currentState) {
+    mainWindow.unmaximize()
+  } else {
+    mainWindow.maximize()
+  }
 })
