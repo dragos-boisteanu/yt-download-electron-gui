@@ -36,11 +36,11 @@ const toggleFullScreen = () => {
 </script>
 
 <template>
-  <div class="flex w-full items-center justify-end gap-x-4 [-webkit-app-region:drag]">
+  <div class="flex items-center justify-end gap-x-2 [-webkit-app-region:no-drag]">
     <button
       @click="minimize"
       v-ripple
-      class="inset-shadow rounded-lg p-2 transition-colors ease-in-out [-webkit-app-region:no-drag] hover:bg-zinc-100 active:bg-zinc-200"
+      class="inset-shadow rounded-lg p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
     >
       <MinusIcon class="size-5" />
     </button>
@@ -48,7 +48,7 @@ const toggleFullScreen = () => {
     <button
       v-ripple
       @click="toggleFullScreen"
-      class="inset-shadow rounded-lg p-2 transition-colors ease-in-out [-webkit-app-region:no-drag] hover:bg-zinc-100 active:bg-zinc-200"
+      class="inset-shadow rounded-lg p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
     >
       <Square2StackIcon v-if="props.isMaximized" class="size-5" />
       <StopIcon v-else class="size-5" />
@@ -57,7 +57,7 @@ const toggleFullScreen = () => {
     <button
       @click="closeApp"
       v-ripple
-      class="inset-shadow rounded-lg p-2 transition-colors ease-in-out [-webkit-app-region:no-drag] hover:bg-zinc-100 active:bg-zinc-200"
+      class="inset-shadow rounded-lg p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
     >
       <XMarkIcon class="size-5" />
     </button>

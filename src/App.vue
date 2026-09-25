@@ -177,7 +177,7 @@ getHistory()
 <template>
   <!-- 1. Change size-full to h-screen (or h-dvh) and overflow-hidden to constrain page height -->
   <div class="flex h-screen w-full flex-col gap-y-2 overflow-hidden bg-zinc-50 p-4 pt-2">
-    <div class="flex w-full items-center justify-between">
+    <div class="flex w-full items-center justify-between [-webkit-app-region:drag]">
       <settings-component />
       <window-actions :isMaximized="isMaximized" />
     </div>
