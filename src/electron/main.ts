@@ -4,6 +4,8 @@ import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 import { VideoInfo } from '@/types/VideoInfo'
 import fs from 'node:fs'
+import fsPromises from 'fs/promises'
+import { type } from 'node:os'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -17,40 +19,48 @@ const dataPath = app.getPath('userData')
 const configFilePath = path.join(dataPath, 'config.json')
 
 async function writeConfigData(key: string, value: string | boolean) {
-  const content = parseConfigData()
+  const content = await parseConfigData()
   content[key] = value
-  fs.writeFileSync(configFilePath, JSON.stringify(content, null, 2))
+  const tempFilePath = `${configFilePath}.tmp`
+  const jsonString = JSON.stringify(content, null, 2)
+
+  // Write to temp file first, then atomically replace actual file
+  await fsPromises.writeFile(tempFilePath, jsonString, 'utf8')
+  await fsPromises.rename(tempFilePath, configFilePath)
 }
 
-function readConfigData(key: string): string | undefined {
-  const content = parseConfigData()
+async function readConfigData(key: string): Promise<string | boolean | undefined> {
+  const content = await parseConfigData()
   return content[key]
 }
 
-function parseConfigData() {
-  // 1. If file missing, create directory + default file
+async function parseConfigData(): Promise<Record<string, string | boolean>> {
   if (!fs.existsSync(configFilePath)) {
     const dirPath = path.dirname(configFilePath)
-
-    if (!fs.existsSync(dirPath)) {
-      fs.mkdirSync(dirPath, { recursive: true })
-    }
-
-    fs.writeFileSync(configFilePath, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8')
-    return DEFAULT_CONFIG
+    await fsPromises.mkdir(dirPath, { recursive: true })
+    await fsPromises.writeFile(configFilePath, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8')
+    return { ...DEFAULT_CONFIG }
   }
 
-  // 2. Read existing file safely
   try {
-    const dataFromFile = fs.readFileSync(configFilePath, 'utf8')
+    const dataFromFile = await fsPromises.readFile(configFilePath, 'utf8')
     return JSON.parse(dataFromFile)
   } catch (error) {
-    // Fallback if the file is corrupted or invalid JSON
-    return DEFAULT_CONFIG
+    console.error('Failed to parse config file, using defaults:', error)
+    return { ...DEFAULT_CONFIG }
   }
 }
 
-let ytDlpPath: string = readConfigData(YT_DLP_PATH_KEY) || ''
+let ytDlpPath: string = ''
+
+try {
+  const path = await readConfigData(YT_DLP_PATH_KEY)
+  if (typeof path === 'string') {
+    ytDlpPath = path
+  }
+} catch (error) {
+  console.error(error)
+}
 
 let mainWindow: BrowserWindow | null = null
 const createMainWindow = () => {
@@ -115,22 +125,23 @@ app.on('window-all-closed', () => {
 ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
   return new Promise((resolve, reject) => {
     if (!ytDlpPath) {
+      //TODO: better handling case when ytDlpPath is not set
       reject('No path specified for yt-dlp')
     }
 
-    const ytdlp = spawn(ytDlpPath, ['--dump-json', '--no-playlist', url])
+    const ytDlp = spawn(ytDlpPath, ['--dump-json', '--no-playlist', url])
 
     let rawData = ''
     let errorData = ''
 
-    ytdlp.stdout.on('data', (data) => {
+    ytDlp.stdout.on('data', (data) => {
       rawData += data.toString()
     })
-    ytdlp.stderr.on('data', (data) => {
+    ytDlp.stderr.on('data', (data) => {
       errorData += data.toString()
     })
 
-    ytdlp.on('close', (code) => {
+    ytDlp.on('close', (code) => {
       if (code === 0) {
         try {
           resolve(JSON.parse(rawData))
@@ -143,6 +154,7 @@ ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
     })
   })
 })
+
 ipcMain.handle('setYtDlpPath', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     title: 'Select yt-dl executable',
@@ -170,11 +182,20 @@ ipcMain.handle('setYtDlpPath', async () => {
   return null
 })
 
+ipcMain.handle('getYtDlpPath', () => ytDlpPath)
+
 const downloadsFolder = app.getPath('downloads')
 const outputTemplate = path.join(downloadsFolder, '%(title)s.%(ext)s')
 
 ipcMain.on('downloadVideo', (event, payload) => {
   if (!ytDlpPath) {
+    //TODO: better handling case when ytDlpPath is not set
+    event.sender.send('downloadProgress', {
+      status: 'error',
+      message: `Download failed. The yt-dlp.exe path is not set`,
+      percentage: 0,
+    })
+
     return
   }
 

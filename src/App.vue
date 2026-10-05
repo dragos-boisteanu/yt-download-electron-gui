@@ -123,6 +123,7 @@ const registerDownloadProgressListener = () => {
     }
   })
 }
+
 registerDownloadProgressListener()
 
 const videoDownloadStarted = () => {
