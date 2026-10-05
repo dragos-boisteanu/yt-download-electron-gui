@@ -3,6 +3,8 @@ const { contextBridge, ipcRenderer } = require('electron')
 
 contextBridge.exposeInMainWorld('bridge', {
   getVideoInfo: (url: string) => ipcRenderer.invoke('getVideoInfo', url),
+  setYtDlpPath: () => ipcRenderer.invoke('setYtDlpPath'),
+
   downloadVideo: (url: string, videoFormatId: string, audioFormatId: string) =>
     ipcRenderer.send('downloadVideo', { url, videoFormatId, audioFormatId }),
 

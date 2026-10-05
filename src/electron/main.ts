@@ -1,53 +1,56 @@
-import { app, BrowserWindow, ipcMain } from 'electron'
+import { app, BrowserWindow, ipcMain, dialog } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
-import * as fs from 'node:fs'
 import { VideoInfo } from '@/types/VideoInfo'
+import fs from 'node:fs'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
-function getBinaryPath() {
-  const isWin = process.platform === 'win32'
-  const binaryName = isWin ? 'yt-dlp.exe' : 'yt-dlp'
-
-  let binaryPath
-
-  if (app.isPackaged) {
-    // Production (packaged app): Extra resources folder
-    binaryPath = path.join(process.resourcesPath, 'bin', binaryName)
-  } else {
-    // Development mode: Point directly relative to root package directory
-    // Handles single binary inside root/bin/
-    const projectRoot = app.getAppPath()
-
-    // Check root/bin/yt-dlp.exe first
-    binaryPath = path.join(projectRoot, 'bin', binaryName)
-
-    // Optional fallback if using subfolders like root/bin/win/yt-dlp.exe
-    if (!fs.existsSync(binaryPath)) {
-      const platformFolder = isWin ? 'win' : process.platform === 'darwin' ? 'mac' : 'linux'
-      binaryPath = path.join(projectRoot, 'bin', platformFolder, binaryName)
-    }
-  }
-
-  // Diagnostic check
-  if (!fs.existsSync(binaryPath)) {
-    console.error(`[yt-dlp Error] Expected binary at: ${binaryPath}`)
-    throw new Error(`yt-dlp binary missing at path: ${binaryPath}`)
-  }
-
-  // Set executable permissions for macOS/Linux
-  if (!isWin) {
-    try {
-      fs.chmodSync(binaryPath, '755')
-    } catch (err: any) {
-      console.warn('Failed to set executable permissions:', err.message)
-    }
-  }
-
-  return binaryPath
+const YT_DLP_PATH_KEY = 'ytDlpPath'
+const DEFAULT_CONFIG: Record<string, string> = {
+  theme: 'system',
+  ytDlpPath: '',
 }
+
+const dataPath = app.getPath('userData')
+const configFilePath = path.join(dataPath, 'config.json')
+
+async function writeConfigData(key: string, value: string | boolean) {
+  const content = parseConfigData()
+  content[key] = value
+  fs.writeFileSync(configFilePath, JSON.stringify(content, null, 2))
+}
+
+function readConfigData(key: string): string | undefined {
+  const content = parseConfigData()
+  return content[key]
+}
+
+function parseConfigData() {
+  // 1. If file missing, create directory + default file
+  if (!fs.existsSync(configFilePath)) {
+    const dirPath = path.dirname(configFilePath)
+
+    if (!fs.existsSync(dirPath)) {
+      fs.mkdirSync(dirPath, { recursive: true })
+    }
+
+    fs.writeFileSync(configFilePath, JSON.stringify(DEFAULT_CONFIG, null, 2), 'utf8')
+    return DEFAULT_CONFIG
+  }
+
+  // 2. Read existing file safely
+  try {
+    const dataFromFile = fs.readFileSync(configFilePath, 'utf8')
+    return JSON.parse(dataFromFile)
+  } catch (error) {
+    // Fallback if the file is corrupted or invalid JSON
+    return DEFAULT_CONFIG
+  }
+}
+
+let ytDlpPath: string = readConfigData(YT_DLP_PATH_KEY) || ''
 
 let mainWindow: BrowserWindow | null = null
 const createMainWindow = () => {
@@ -95,7 +98,13 @@ const createMainWindow = () => {
   })
 }
 
-app.whenReady().then(createMainWindow)
+const gotTheLock = app.requestSingleInstanceLock()
+
+if (!gotTheLock) {
+  app.quit()
+} else {
+  app.whenReady().then(createMainWindow)
+}
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin') {
@@ -105,8 +114,11 @@ app.on('window-all-closed', () => {
 
 ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
   return new Promise((resolve, reject) => {
-    const binary = getBinaryPath()
-    const ytdlp = spawn(binary, ['--dump-json', '--no-playlist', url])
+    if (!ytDlpPath) {
+      reject('No path specified for yt-dlp')
+    }
+
+    const ytdlp = spawn(ytDlpPath, ['--dump-json', '--no-playlist', url])
 
     let rawData = ''
     let errorData = ''
@@ -131,11 +143,41 @@ ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
     })
   })
 })
+ipcMain.handle('setYtDlpPath', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: 'Select yt-dl executable',
+    properties: ['openFile'],
+    filters: [{ name: 'exe', extensions: ['exe'] }],
+  })
+
+  // 1. User canceled or closed the dialog
+  if (canceled || filePaths.length === 0) {
+    return null
+  }
+
+  const selectedPath = filePaths[0]
+  const fileName = path.basename(selectedPath).toLowerCase()
+
+  // 2. Strict validation: Only return path if the selected file is yt-dlp.exe
+  if (fileName === 'yt-dlp.exe') {
+    writeConfigData(YT_DLP_PATH_KEY, selectedPath).catch((error) =>
+      console.error('setYtDlpPath', error),
+    )
+    ytDlpPath = selectedPath
+    return selectedPath
+  }
+
+  return null
+})
 
 const downloadsFolder = app.getPath('downloads')
 const outputTemplate = path.join(downloadsFolder, '%(title)s.%(ext)s')
 
 ipcMain.on('downloadVideo', (event, payload) => {
+  if (!ytDlpPath) {
+    return
+  }
+
   let currentPhase = 'video' // 'video' | 'audio' | 'merging'
   let lastReportedRawPercentage = 0
   let lastReportedFloor = -1
@@ -153,8 +195,7 @@ ipcMain.on('downloadVideo', (event, payload) => {
     payload.url,
   ]
 
-  const binary = getBinaryPath()
-  const process = spawn(binary, args)
+  const process = spawn(ytDlpPath, args)
 
   process.stdout.on('data', (data) => {
     const output = data.toString()

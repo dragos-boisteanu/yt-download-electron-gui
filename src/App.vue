@@ -12,8 +12,8 @@ import { DownloadsHistory } from '@/types/DownloadsHistory'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/solid'
 import { vRipple } from '@/directives/vRipple'
-import WindowActions from '@/components/window-actions.vue'
-import SettingsComponent from '@/components/settings-component.vue'
+import WindowActions from '@/components/windowActions.vue'
+import SettingsComponent from '@/components/settings/settingsComponent.vue'
 
 const isLoadingVideoData = ref<boolean>(false)
 
