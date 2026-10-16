@@ -197,7 +197,7 @@ getHistory()
       <button
         @click="requestVideoInfo()"
         v-ripple
-        class="w-20 cursor-pointer rounded bg-sky-600 px-4 py-2 text-center text-sm text-white shadow transition-colors hover:bg-sky-500 active:bg-sky-700 disabled:cursor-default disabled:bg-neutral-400"
+        class="w-22 cursor-pointer rounded bg-sky-600 px-4 py-2 text-center text-sm text-white shadow transition-colors hover:bg-sky-500 active:bg-sky-700 disabled:cursor-default disabled:bg-neutral-400"
         :class="{ '!cursor-wait': isLoadingVideoData }"
         :disabled="isSearchDisabled"
       >
