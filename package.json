@@ -16,14 +16,15 @@
     "@tailwindcss/vite": "^4.3.3",
     "idb-keyval": "^6.3.0",
     "install": "^0.13.0",
+    "pinia": "^4.1.0",
     "tailwindcss": "^4.3.3",
     "vue": "^3.5.40"
   },
   "devDependencies": {
+    "@heroicons/vue": "^2.2.0",
     "@tsconfig/node24": "^24.0.4",
     "@types/node": "^24.13.3",
     "@vitejs/plugin-vue": "^6.0.8",
-    "@heroicons/vue": "^2.2.0",
     "@vue-hero-icons/solid": "^1.7.2",
     "@vue/eslint-config-typescript": "^14.9.0",
     "@vue/tsconfig": "^0.9.1",

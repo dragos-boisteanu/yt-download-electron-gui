@@ -7,20 +7,20 @@ import { VideoDetails } from '@/types/VideoDetails'
 import { YtDlpProgress } from '@/types/YtDlpProgress'
 import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
 import formatBytesToMB from '@/helpers/formatBytesToMB'
-import { get } from 'idb-keyval'
-import { DownloadsHistory } from '@/types/DownloadsHistory'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/solid'
 import { vRipple } from '@/directives/vRipple'
 import WindowActions from '@/components/windowActions.vue'
 import SettingsComponent from '@/components/settings/settingsComponent.vue'
+import { useHistoryStore } from '@/stores/history'
+
+const historyStore = useHistoryStore()
 
 const isLoadingVideoData = ref<boolean>(false)
 
 const videoFormats = ref<MediaFormat[]>([])
 const videoDetails = ref<VideoDetails | null>(null)
 
-const downloadsHistory = ref<DownloadsHistory[]>([])
 
 const audioFormats = ref<MediaFormat[]>([])
 const highestAudioFormat = ref<MediaFormat | undefined>(null)
@@ -131,20 +131,11 @@ const videoDownloadStarted = () => {
   downloadState.value = 'Initiating...'
 }
 
-const getHistory = async () => {
-  try {
-    const downloads = await get('downloadsHistory')
 
-    if (downloads) {
-      downloadsHistory.value = downloads
-    }
-  } catch (error) {
-    console.error('getHistory', error)
-  }
-}
 
 const isMaximized = ref<boolean>(false)
 let removeListener: (() => void) | null = null
+
 const registerElectronListeners = () => {
   const bridge = (window as any).bridge
   if (!bridge) {
@@ -172,7 +163,6 @@ onUnmounted(() => {
 })
 registerElectronListeners()
 
-getHistory()
 </script>
 
 <template>
@@ -250,7 +240,7 @@ getHistory()
 
         <template v-if="selectedTab === 1">
           <video-component
-            v-for="historyItem in downloadsHistory"
+            v-for="historyItem in historyStore.history"
             :key="historyItem.videoFormat.format_id"
             :videoDetails="historyItem.videoDetails"
             :audioFormat="historyItem.audioFormat"

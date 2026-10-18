@@ -1,11 +1,13 @@
 <script setup lang="ts">
 import { MediaFormat } from '@/types/MediaFormat'
 import { VideoDetails } from '@/types/VideoDetails'
-import { update } from 'idb-keyval'
-import { DownloadsHistory } from '@/types/DownloadsHistory'
-import { toRaw } from 'vue'
 import { vRipple } from '@/directives/vRipple'
 import { TrashIcon } from '@heroicons/vue/24/outline'
+import { useHistoryStore } from '@/stores/history'
+import { toRaw } from 'vue'
+
+const historyStore = useHistoryStore()
+
 
 const props = defineProps<{
   format: MediaFormat
@@ -39,6 +41,10 @@ const downloadVideo = async () => {
   }
 
   try {
+    if (!(props.videoDetails && props.audioFormat && props.format)) {
+      return
+    }
+
     emits('download')
 
     bridge.downloadVideo(
@@ -47,70 +53,29 @@ const downloadVideo = async () => {
       props.audioFormat.format_id,
     )
 
-    update('downloadsHistory', (value) => {
-      if (!(props.videoDetails && props.audioFormat && props.format)) {
-        return
-      }
-
-      const newHistoryEntry: DownloadsHistory = {
-        videoDetails: toRaw(props.videoDetails),
-        audioFormat: toRaw(props.audioFormat),
-        videoFormat: toRaw(props.format),
-      }
-
-      if (value) {
-        const entryIndex = value.findIndex(
-          (entry: DownloadsHistory) => entry.videoDetails.url === newHistoryEntry.videoDetails.url,
-        )
-
-        if (entryIndex === -1) {
-          value.push(newHistoryEntry)
-        } else {
-          value.splice(entryIndex, 1, newHistoryEntry)
-        }
-      } else {
-        const history: DownloadsHistory[] = []
-        history.push(newHistoryEntry)
-
-        value = history
-      }
-
-      return value
-    }).catch((error) => console.error('getDownloadsHistory', error))
+    historyStore
+      .add(toRaw(props.videoDetails), toRaw(props.audioFormat), toRaw(props.format))
+      .catch((error: any) => console.error('saveDownloadVideoHistory', error))
   } catch (error: any) {
     console.error('downloadVideo', error)
   }
 }
 
-const removeHistoryItem = async () => {
-  try {
-    await update('downloadsHistory', (values) => {
-      const formatIndex = values.findIndex(
-        (v) => v.videoFormat.format_id === props.format.format_id,
-      )
-
-      if (formatIndex === -1) {
-        return values
-      }
-
-      return values.toSpliced(formatIndex, 1)
-    })
-  } catch (error) {
-    console.error('removeHistoryItem', error)
-  }
+const removeHistoryItem =  () => {
+  historyStore.remove(props.format.format_id).catch(error => console.error('removeHistoryItem', error))
 }
 </script>
 
 <template>
   <div class="my-2 flex w-full flex-wrap items-center gap-4 rounded bg-zinc-50 p-2 hover:shadow">
     <div class="flex min-w-96 flex-1 items-start gap-x-4">
-        <button
-          v-if="canDelete"
-          @click="removeHistoryItem"
-          class="self-center inset-shadow cursor-pointer rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
-        >
-          <TrashIcon class="size-5"></TrashIcon>
-        </button>
+      <button
+        v-if="canDelete"
+        @click="removeHistoryItem"
+        class="inset-shadow cursor-pointer self-center rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
+      >
+        <TrashIcon class="size-5"></TrashIcon>
+      </button>
 
       <div class="h-16 w-26 rounded-lg bg-zinc-500">
         <img
