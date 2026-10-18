@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { XMarkIcon } from '@heroicons/vue/24/solid'
-import { StopIcon, MinusIcon, Square2StackIcon } from '@heroicons/vue/24/outline'
+import { MinusIcon, Square2StackIcon, StopIcon } from '@heroicons/vue/24/outline'
 import { vRipple } from '@/directives/vRipple'
 
 const props = defineProps<{

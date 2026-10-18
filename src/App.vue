@@ -21,7 +21,6 @@ const isLoadingVideoData = ref<boolean>(false)
 const videoFormats = ref<MediaFormat[]>([])
 const videoDetails = ref<VideoDetails | null>(null)
 
-
 const audioFormats = ref<MediaFormat[]>([])
 const highestAudioFormat = ref<MediaFormat | undefined>(null)
 
@@ -131,8 +130,6 @@ const videoDownloadStarted = () => {
   downloadState.value = 'Initiating...'
 }
 
-
-
 const isMaximized = ref<boolean>(false)
 let removeListener: (() => void) | null = null
 
@@ -162,7 +159,6 @@ onUnmounted(() => {
   }
 })
 registerElectronListeners()
-
 </script>
 
 <template>

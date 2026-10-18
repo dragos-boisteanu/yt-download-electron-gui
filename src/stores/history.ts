@@ -8,8 +8,11 @@ import { MediaFormat } from '@/types/MediaFormat'
 export const useHistoryStore = defineStore('historyStore', () => {
   const history = ref<DownloadsHistory[]>([])
 
-
-  const add = async (videoDetails: VideoDetails, audioFormat: MediaFormat, videoFormat: MediaFormat) => {
+  const add = async (
+    videoDetails: VideoDetails,
+    audioFormat: MediaFormat,
+    videoFormat: MediaFormat,
+  ) => {
     try {
       const newHistoryEntry: DownloadsHistory = {
         videoDetails,
@@ -17,7 +20,7 @@ export const useHistoryStore = defineStore('historyStore', () => {
         videoFormat,
       }
 
-     await update('downloadsHistory', (value) => {
+      await update('downloadsHistory', (value) => {
         if (value) {
           const entryIndex = value.findIndex(
             (entry: DownloadsHistory) =>
@@ -39,7 +42,6 @@ export const useHistoryStore = defineStore('historyStore', () => {
         return value
       })
 
-
       const entryIndex = history.value.findIndex(
         (entry: DownloadsHistory) => entry.videoDetails.url === newHistoryEntry.videoDetails.url,
       )
@@ -49,8 +51,6 @@ export const useHistoryStore = defineStore('historyStore', () => {
       } else {
         history.value.splice(entryIndex, 1, newHistoryEntry)
       }
-
-
     } catch (error) {
       throw error
     }
@@ -75,7 +75,7 @@ export const useHistoryStore = defineStore('historyStore', () => {
       )
 
       if (formatIndex > -1) {
-        history.value.splice(formatIndex,1)
+        history.value.splice(formatIndex, 1)
       }
     } catch (error) {
       throw error
@@ -98,6 +98,6 @@ export const useHistoryStore = defineStore('historyStore', () => {
   return {
     history,
     add,
-    remove
+    remove,
   }
 })

@@ -2,6 +2,7 @@ import { MediaFormat } from '@/types/MediaFormat'
 import { Thumbnail } from '@/types/Thumbnail'
 import { CaptionTrack } from '@/types/CaptionTrack'
 import { ExtractorVersion } from '@/types/ExtractorVersion'
+
 export interface VideoInfo {
   id: string
   title: string

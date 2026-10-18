@@ -8,7 +8,6 @@ import { toRaw } from 'vue'
 
 const historyStore = useHistoryStore()
 
-
 const props = defineProps<{
   format: MediaFormat
   videoDetails: VideoDetails | null
@@ -61,8 +60,10 @@ const downloadVideo = async () => {
   }
 }
 
-const removeHistoryItem =  () => {
-  historyStore.remove(props.format.format_id).catch(error => console.error('removeHistoryItem', error))
+const removeHistoryItem = () => {
+  historyStore
+    .remove(props.format.format_id)
+    .catch((error) => console.error('removeHistoryItem', error))
 }
 </script>
 
