@@ -16,7 +16,7 @@ const toggleShowSettingsDialog = () => {
     <button
       @click="toggleShowSettingsDialog()"
       v-ripple
-      class="inset-shadow cursor-pointer rounded-lg p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
+      class="inset-shadow cursor-pointer rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
     >
       <CogIcon class="size-5" />
     </button>

@@ -5,7 +5,6 @@ import { spawn } from 'node:child_process'
 import { VideoInfo } from '@/types/VideoInfo'
 import fs from 'node:fs'
 import fsPromises from 'fs/promises'
-import { type } from 'node:os'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -171,7 +170,7 @@ ipcMain.handle('setYtDlpPath', async () => {
   const fileName = path.basename(selectedPath).toLowerCase()
 
   // 2. Strict validation: Only return path if the selected file is yt-dlp.exe
-  if (fileName === 'yt-dlp.exe') {
+  if (fileName === 'yt-dlp.exe' || 'yt-dlp_x86.exe') {
     writeConfigData(YT_DLP_PATH_KEY, selectedPath).catch((error) =>
       console.error('setYtDlpPath', error),
     )

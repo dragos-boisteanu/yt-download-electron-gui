@@ -257,6 +257,7 @@ getHistory()
             :format="historyItem.videoFormat"
             :isDownloading="isDownloading"
             @download="videoDownloadStarted()"
+            :canDelete="true"
           />
         </template>
       </div>
