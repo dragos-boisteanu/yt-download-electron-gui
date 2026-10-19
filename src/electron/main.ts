@@ -9,9 +9,11 @@ import fsPromises from 'fs/promises'
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 const YT_DLP_PATH_KEY = 'ytDlpPath'
+const DOWNLOADS_PATH_KEY = 'downloadsPath'
 const DEFAULT_CONFIG: Record<string, string> = {
   theme: 'system',
   ytDlpPath: '',
+  downloadsPath: '',
 }
 
 const dataPath = app.getPath('userData')
@@ -51,7 +53,6 @@ async function parseConfigData(): Promise<Record<string, string | boolean>> {
 }
 
 let ytDlpPath: string = ''
-
 try {
   const path = await readConfigData(YT_DLP_PATH_KEY)
   if (typeof path === 'string') {
@@ -59,6 +60,18 @@ try {
   }
 } catch (error) {
   console.error(error)
+}
+
+let downloadsFolder = ''
+try {
+  const path = await readConfigData(DOWNLOADS_PATH_KEY)
+  if (typeof path === 'string') {
+    downloadsFolder = path
+  } else {
+    downloadsFolder = app.getPath('downloads')
+  }
+} catch (error) {
+  console.error()
 }
 
 let mainWindow: BrowserWindow | null = null
@@ -154,6 +167,24 @@ ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
   })
 })
 
+ipcMain.handle('setDownloadsPath', async () => {
+  const { canceled, filePaths } = await dialog.showOpenDialog({
+    title: 'Select downloads location',
+    properties: ['openDirectory'],
+  })
+
+  if (canceled || filePaths.length === 0) {
+    return null
+  }
+
+  downloadsFolder = filePaths[0]
+  writeConfigData(DOWNLOADS_PATH_KEY, downloadsFolder).catch((error) =>
+    console.error('saveDownloadsPathToConfig', error),
+  )
+
+  return downloadsFolder
+})
+
 ipcMain.handle('setYtDlpPath', async () => {
   const { canceled, filePaths } = await dialog.showOpenDialog({
     title: 'Select yt-dl executable',
@@ -172,7 +203,7 @@ ipcMain.handle('setYtDlpPath', async () => {
   // 2. Strict validation: Only return path if the selected file is yt-dlp.exe
   if (fileName === 'yt-dlp.exe' || 'yt-dlp_x86.exe') {
     writeConfigData(YT_DLP_PATH_KEY, selectedPath).catch((error) =>
-      console.error('setYtDlpPath', error),
+      console.error('saveYtDlPathToConfig', error),
     )
     ytDlpPath = selectedPath
     return selectedPath
@@ -182,9 +213,7 @@ ipcMain.handle('setYtDlpPath', async () => {
 })
 
 ipcMain.handle('getYtDlpPath', () => ytDlpPath)
-
-const downloadsFolder = app.getPath('downloads')
-const outputTemplate = path.join(downloadsFolder, '%(title)s.%(ext)s')
+ipcMain.handle('getDownloadsPath', () => downloadsFolder)
 
 ipcMain.on('downloadVideo', (event, payload) => {
   if (!ytDlpPath) {
@@ -203,6 +232,7 @@ ipcMain.on('downloadVideo', (event, payload) => {
   let lastReportedFloor = -1
 
   const formatSelection = `${payload.videoFormatId}+${payload.audioFormatId}` // e.g., "313+251"
+  const outputTemplate = path.join(downloadsFolder, '%(title)s.%(ext)s')
 
   const args = [
     '-f',

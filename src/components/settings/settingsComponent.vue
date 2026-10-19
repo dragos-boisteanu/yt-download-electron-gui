@@ -4,6 +4,7 @@ import { vRipple } from '@/directives/vRipple'
 import DialogComponent from '@/components/dialogComponent.vue'
 import { ref } from 'vue'
 import YtDlBinPathSettingComponent from '@/components/settings/ytDlBinPathSettingComponent.vue'
+import DownloadsPathSettingsComponent from '@/components/settings/downloadsPathSettingsComponent.vue'
 
 const showSettingsDialog = ref<boolean>(false)
 const toggleShowSettingsDialog = () => {
@@ -23,7 +24,10 @@ const toggleShowSettingsDialog = () => {
 
     <dialog-component v-if="showSettingsDialog" @close="toggleShowSettingsDialog()">
       <template #title>Settings</template>
-      <template #default> <yt-dl-bin-path-setting-component /></template>
+      <template #default>
+        <yt-dl-bin-path-setting-component />
+        <downloads-path-settings-component />
+      </template>
     </dialog-component>
   </div>
 </template>

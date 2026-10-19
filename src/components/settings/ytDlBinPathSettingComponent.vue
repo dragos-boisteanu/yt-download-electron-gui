@@ -10,7 +10,10 @@ const openFilePicker = async () => {
     return
   }
 
-  await bridge.setYtDlpPath()
+  const path = await bridge.setYtDlpPath()
+  if (path) {
+    ytDlpPath.value = path
+  }
 }
 
 const getYtDlpPath = async () => {

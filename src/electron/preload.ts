@@ -5,6 +5,8 @@ contextBridge.exposeInMainWorld('bridge', {
   getVideoInfo: (url: string) => ipcRenderer.invoke('getVideoInfo', url),
   setYtDlpPath: () => ipcRenderer.invoke('setYtDlpPath'),
   getYtDlpPath: () => ipcRenderer.invoke('getYtDlpPath'),
+  setDownloadsPath: () => ipcRenderer.invoke('setDownloadsPath'),
+  getDownloadsPath: () => ipcRenderer.invoke('getDownloadsPath'),
 
   downloadVideo: (url: string, videoFormatId: string, audioFormatId: string) =>
     ipcRenderer.send('downloadVideo', { url, videoFormatId, audioFormatId }),
