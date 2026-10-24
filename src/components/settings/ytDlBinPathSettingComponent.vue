@@ -30,11 +30,9 @@ getYtDlpPath()
 <template>
   <div class="flex w-full items-center justify-between p-4">
     <div>
-      <div class="font-semibold text-neutral-700">yt-dlp Executable</div>
-      <div class="text-sm text-neutral-600">
-        Select the location of the yt-dlp.exe file on your computer.
-      </div>
-      <div v-if="ytDlpPath" class="text-xs text-neutral-600">
+      <div class="font-semibold">yt-dlp Executable</div>
+      <div class="text-sm">Select the location of the yt-dlp.exe file on your computer.</div>
+      <div v-if="ytDlpPath" class="text-xs">
         <span class="pr-1 font-semibold">Current path:</span>
         <span>{{ ytDlpPath }}</span>
       </div>

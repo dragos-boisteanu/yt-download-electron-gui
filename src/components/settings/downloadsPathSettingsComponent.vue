@@ -32,9 +32,9 @@ getDownloadsPath()
 <template>
   <div class="flex w-full items-center justify-between p-4">
     <div>
-      <div class="font-semibold text-neutral-700">Downloads location</div>
-      <div class="text-sm text-neutral-600">Select where downloaded content will be saved.</div>
-      <div v-if="downloadsPath" class="text-xs text-neutral-600">
+      <div class="font-semibold">Downloads location</div>
+      <div class="text-sm">Select where downloaded content will be saved.</div>
+      <div v-if="downloadsPath" class="text-xs">
         <span class="pr-1 font-semibold">Current path:</span>
         <span>{{ downloadsPath }}</span>
       </div>
