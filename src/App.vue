@@ -220,7 +220,7 @@ registerElectronListeners()
 
       <!-- 3. Results Container: Takes remaining space and enables independent vertical scroll -->
       <div
-        class="min-h-0 w-full flex-1 scrollbar-gutter-both overflow-y-auto rounded-lg bg-zinc-100 p-2 inset-shadow-sm"
+        class="min-h-0 w-full flex-1 scrollbar-gutter-auto overflow-y-auto rounded-xl bg-zinc-100 px-2 inset-shadow-sm"
       >
         <template v-if="selectedTab === 0">
           <video-component
