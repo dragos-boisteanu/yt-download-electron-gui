@@ -69,7 +69,7 @@ const removeHistoryItem = () => {
 
 <template>
   <div
-    class="my-2 flex w-full flex-wrap items-center gap-4 rounded-lg bg-zinc-50 p-2 shadow hover:shadow-lg"
+    class="my-2 flex w-full flex-wrap items-center gap-2 rounded-lg bg-zinc-50 p-2 shadow hover:shadow-lg"
   >
     <div class="flex min-w-96 flex-1 items-start gap-x-4">
       <button
