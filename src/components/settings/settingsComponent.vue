@@ -5,6 +5,7 @@ import DialogComponent from '@/components/dialogComponent.vue'
 import { ref } from 'vue'
 import YtDlBinPathSettingComponent from '@/components/settings/ytDlBinPathSettingComponent.vue'
 import DownloadsPathSettingsComponent from '@/components/settings/downloadsPathSettingsComponent.vue'
+import NotificationSettingComponent from '@/components/settings/notificationSettingComponent.vue'
 
 const showSettingsDialog = ref<boolean>(false)
 const toggleShowSettingsDialog = () => {
@@ -27,6 +28,7 @@ const toggleShowSettingsDialog = () => {
       <template #default>
         <yt-dl-bin-path-setting-component />
         <downloads-path-settings-component />
+        <notification-setting-component />
       </template>
     </dialog-component>
   </div>

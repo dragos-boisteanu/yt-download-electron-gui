@@ -7,4 +7,6 @@ export interface YtDlpProgress {
   speed?: string
   eta?: string
   message?: string
+  uniqueId?: string
+  title?: string
 }

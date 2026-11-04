@@ -13,6 +13,7 @@ import { vRipple } from '@/directives/vRipple'
 import WindowActions from '@/components/windowActions.vue'
 import SettingsComponent from '@/components/settings/settingsComponent.vue'
 import { useHistoryStore } from '@/stores/history'
+import { useNotificationStore } from '@/stores/notification'
 
 const historyStore = useHistoryStore()
 
@@ -102,6 +103,7 @@ const requestVideoInfo = async () => {
   }
 }
 
+const notificationStore = useNotificationStore()
 const registerDownloadProgressListener = () => {
   const bridge = (window as any).bridge
   if (!bridge) {
@@ -119,6 +121,20 @@ const registerDownloadProgressListener = () => {
 
     if (progress.status === 'completed' || progress.status === 'error') {
       isDownloading.value = false
+
+      if (notificationStore.canShowNotification) {
+        let title: string
+        let body: string
+
+        if (progress.status === 'completed') {
+          title = 'Video downloaded successfully.'
+          body = `${progress.title} downloaded successfully.`
+        } else {
+          title = 'Download failed'
+          body = `Failed to download ${progress.title}`
+        }
+        notificationStore.showNotification(title, body, progress.title || '', progress.uniqueId)
+      }
     }
   })
 }
