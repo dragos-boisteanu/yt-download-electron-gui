@@ -1,12 +1,12 @@
 import {
   app,
   BrowserWindow,
-  shell,
   dialog,
   ipcMain,
   IpcMainEvent,
-  Notification,
   IpcMainInvokeEvent,
+  Notification,
+  shell,
 } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -246,11 +246,7 @@ ipcMain.on('showNotification', (_event: IpcMainEvent, payload: NotificationPaylo
 })
 
 ipcMain.handle('checkFile', (_event: IpcMainInvokeEvent, title: string) => {
-  console.log('path', getDownloadedFilePath(title))
-  const file = fs.existsSync(getDownloadedFilePath(title))
-  console.log('file', file)
-
-  return file
+  return fs.existsSync(getDownloadedFilePath(title))
 })
 
 ipcMain.on('openInFolder', (_event: IpcMainEvent, title: string) => {
