@@ -1,4 +1,13 @@
-import { app, BrowserWindow, shell, dialog, ipcMain, IpcMainEvent, Notification } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  shell,
+  dialog,
+  ipcMain,
+  IpcMainEvent,
+  Notification,
+  IpcMainInvokeEvent,
+} from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
@@ -219,6 +228,9 @@ ipcMain.handle('setYtDlpPath', async () => {
 ipcMain.handle('getYtDlpPath', () => ytDlpPath)
 ipcMain.handle('getDownloadsPath', () => downloadsFolder)
 
+const getDownloadedFilePath = (title: string) => {
+  return path.join(downloadsFolder, `${title}.${EXTENSION}`)
+}
 ipcMain.on('showNotification', (_event: IpcMainEvent, payload: NotificationPayload): void => {
   const notification = new Notification({
     title: payload.title,
@@ -227,11 +239,22 @@ ipcMain.on('showNotification', (_event: IpcMainEvent, payload: NotificationPaylo
   })
 
   notification.on('click', () => {
-    const folderPath = path.join(downloadsFolder, `${payload.fileName}.${EXTENSION}`)
-    shell.showItemInFolder(folderPath)
+    shell.showItemInFolder(getDownloadedFilePath(payload.fileName))
   })
 
   notification.show()
+})
+
+ipcMain.handle('checkFile', (_event: IpcMainInvokeEvent, title: string) => {
+  console.log('path', getDownloadedFilePath(title))
+  const file = fs.existsSync(getDownloadedFilePath(title))
+  console.log('file', file)
+
+  return file
+})
+
+ipcMain.on('openInFolder', (_event: IpcMainEvent, title: string) => {
+  shell.showItemInFolder(getDownloadedFilePath(title))
 })
 
 ipcMain.on('downloadVideo', (event, payload: DownloadPayload) => {

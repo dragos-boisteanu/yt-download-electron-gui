@@ -2,19 +2,24 @@
 import { MediaFormat } from '@/types/MediaFormat'
 import { VideoDetails } from '@/types/VideoDetails'
 import { vRipple } from '@/directives/vRipple'
-import { TrashIcon } from '@heroicons/vue/24/outline'
+import { TrashIcon, FolderOpenIcon } from '@heroicons/vue/24/outline'
 import { useHistoryStore } from '@/stores/history'
-import { toRaw } from 'vue'
+import { onMounted, ref, toRaw } from 'vue'
 
 const historyStore = useHistoryStore()
 
-const props = defineProps<{
+interface Props {
   format: MediaFormat
   videoDetails: VideoDetails | null
   audioFormat?: MediaFormat
   isDownloading: boolean
   canDelete?: boolean
-}>()
+  isHistory?: boolean
+}
+const props = withDefaults(defineProps<Props>(), {
+  canDelete: false,
+  isHistory: false,
+})
 
 const emits = defineEmits<{
   (e: 'download'): void
@@ -60,6 +65,33 @@ const downloadVideo = async () => {
   } catch (error: any) {
     console.error('downloadVideo', error)
   }
+}
+
+//TODO: check for the file after the download is complete
+//TODO: watch the file so when the users deletes it the app will react
+const checkFile = async (): Promise<boolean> => {
+  const bridge = (window as any).bridge
+  if (!bridge) {
+    return false
+  }
+
+  return await bridge.checkFile(props.videoDetails.title)
+}
+
+const fileExists = ref<boolean>(false)
+onMounted(() => {
+  checkFile().then((response: boolean) => {
+    fileExists.value = response
+  })
+})
+
+const openInFolder = () => {
+  const bridge = (window as any).bridge
+  if (!bridge) {
+    return false
+  }
+
+  bridge.openInFolder(props.videoDetails.title)
 }
 
 const removeHistoryItem = () => {
@@ -127,6 +159,14 @@ const removeHistoryItem = () => {
       </div>
 
       <button
+        v-if="fileExists"
+        @click="openInFolder"
+        class="inset-shadow cursor-pointer self-center rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
+      >
+        <FolderOpenIcon class="size-5" />
+      </button>
+      <button
+        v-else
         :disabled="isDownloading"
         @click="downloadVideo()"
         v-ripple

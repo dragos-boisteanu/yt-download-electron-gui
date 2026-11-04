@@ -7,6 +7,7 @@ contextBridge.exposeInMainWorld('bridge', {
   getYtDlpPath: () => ipcRenderer.invoke('getYtDlpPath'),
   setDownloadsPath: () => ipcRenderer.invoke('setDownloadsPath'),
   getDownloadsPath: () => ipcRenderer.invoke('getDownloadsPath'),
+  checkFile: (title: string) => ipcRenderer.invoke('checkFile', title),
 
   downloadVideo: (payload: any) => ipcRenderer.send('downloadVideo', payload),
 
@@ -22,6 +23,8 @@ contextBridge.exposeInMainWorld('bridge', {
 
   closeApp: (): void => ipcRenderer.send('closeApp'),
   minimize: (): void => ipcRenderer.send('minimize'),
+
+  openInFolder: (title: string): void => ipcRenderer.send('openInFolder', title),
 
   showNotification: (payload: any): void => ipcRenderer.send('showNotification', payload),
 
