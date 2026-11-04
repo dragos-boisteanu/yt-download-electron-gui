@@ -8,8 +8,7 @@ contextBridge.exposeInMainWorld('bridge', {
   setDownloadsPath: () => ipcRenderer.invoke('setDownloadsPath'),
   getDownloadsPath: () => ipcRenderer.invoke('getDownloadsPath'),
 
-  downloadVideo: (url: string, videoFormatId: string, audioFormatId: string) =>
-    ipcRenderer.send('downloadVideo', { url, videoFormatId, audioFormatId }),
+  downloadVideo: (payload: any) => ipcRenderer.send('downloadVideo', payload),
 
   onDownloadProgress: (callback: (progressUpdate: any) => void) => {
     const listener = (_event: any, data: any) => callback(data)
@@ -23,6 +22,9 @@ contextBridge.exposeInMainWorld('bridge', {
 
   closeApp: (): void => ipcRenderer.send('closeApp'),
   minimize: (): void => ipcRenderer.send('minimize'),
+
+  showNotification: (payload: any): void => ipcRenderer.send('showNotification', payload),
+
   toggleFullScreen: (currentState: boolean): void =>
     ipcRenderer.send('toggleFullScreen', currentState),
 

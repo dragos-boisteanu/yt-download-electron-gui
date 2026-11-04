@@ -1,10 +1,12 @@
-import { app, BrowserWindow, dialog, ipcMain } from 'electron'
+import { app, BrowserWindow, shell, dialog, ipcMain, IpcMainEvent, Notification } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
 import { VideoInfo } from '@/types/VideoInfo'
 import fs from 'node:fs'
 import fsPromises from 'fs/promises'
+import { NotificationPayload } from '@/types/NotificationPayload'
+import { DownloadPayload } from '@/types/DownloadPayload'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -15,6 +17,7 @@ const DEFAULT_CONFIG: Record<string, string> = {
   ytDlpPath: '',
   downloadsPath: '',
 }
+const EXTENSION = 'mp4'
 
 const dataPath = app.getPath('userData')
 const configFilePath = path.join(dataPath, 'config.json')
@@ -97,7 +100,7 @@ const createMainWindow = () => {
     mainWindow.loadFile(path.join(__dirname, '../index.html'))
   }
 
-  mainWindow.webContents.openDevTools()
+  // mainWindow.webContents.openDevTools()
 
   mainWindow.on('maximize', () => {
     if (!mainWindow) {
@@ -120,8 +123,9 @@ const createMainWindow = () => {
   })
 }
 
-const gotTheLock = app.requestSingleInstanceLock()
+app.setAppUserModelId(process.execPath)
 
+const gotTheLock = app.requestSingleInstanceLock()
 if (!gotTheLock) {
   app.quit()
 } else {
@@ -215,13 +219,30 @@ ipcMain.handle('setYtDlpPath', async () => {
 ipcMain.handle('getYtDlpPath', () => ytDlpPath)
 ipcMain.handle('getDownloadsPath', () => downloadsFolder)
 
-ipcMain.on('downloadVideo', (event, payload) => {
+ipcMain.on('showNotification', (_event: IpcMainEvent, payload: NotificationPayload): void => {
+  const notification = new Notification({
+    title: payload.title,
+    body: payload.body,
+    id: payload.tag,
+  })
+
+  notification.on('click', () => {
+    const folderPath = path.join(downloadsFolder, `${payload.fileName}.${EXTENSION}`)
+    shell.showItemInFolder(folderPath)
+  })
+
+  notification.show()
+})
+
+ipcMain.on('downloadVideo', (event, payload: DownloadPayload) => {
   if (!ytDlpPath) {
     //TODO: better handling case when ytDlpPath is not set
     event.sender.send('downloadProgress', {
       status: 'error',
       message: `Download failed. The yt-dlp.exe path is not set`,
       percentage: 0,
+      uniqueId: payload.uniqueId,
+      title: payload.title,
     })
 
     return
@@ -231,14 +252,14 @@ ipcMain.on('downloadVideo', (event, payload) => {
   let lastReportedRawPercentage = 0
   let lastReportedFloor = -1
 
-  const formatSelection = `${payload.videoFormatId}+${payload.audioFormatId}` // e.g., "313+251"
+  const formatSelection = `${payload.videoId}+${payload.audioId}` // e.g., "313+251"
   const outputTemplate = path.join(downloadsFolder, '%(title)s.%(ext)s')
 
   const args = [
     '-f',
     formatSelection,
     '--merge-output-format',
-    'mp4',
+    EXTENSION,
     '-o',
     outputTemplate, // Tells yt-dlp exactly where to save it
     '--newline', // Forces output on new lines for easier parsing
@@ -261,6 +282,8 @@ ipcMain.on('downloadVideo', (event, payload) => {
           size: 'N/A',
           speed: 'N/A',
           eta: 'N/A',
+          title: payload.title,
+          uniqueId: payload.uniqueId,
         })
       }
       return
@@ -322,12 +345,16 @@ ipcMain.on('downloadVideo', (event, payload) => {
         size: 'N/A',
         speed: '0B/s',
         eta: '00:00',
+        title: payload.title,
+        uniqueId: payload.uniqueId,
       })
     } else {
       event.sender.send('downloadProgress', {
         status: 'error',
         message: `Download failed with exit code ${code}`,
         percentage: 0,
+        title: payload.title,
+        uniqueId: payload.uniqueId,
       })
     }
   })
@@ -349,7 +376,7 @@ ipcMain.on('minimize', () => {
   mainWindow.minimize()
 })
 
-ipcMain.on('toggleFullScreen', (event: any, currentState: boolean) => {
+ipcMain.on('toggleFullScreen', (event: IpcMainEvent, currentState: boolean) => {
   if (!mainWindow) {
     return
   }

@@ -16,7 +16,7 @@ const close = () => {
     class="fixed top-0 left-0 z-10 flex size-full items-center justify-center overflow-hidden bg-black/50 backdrop-blur"
   >
     <div
-      class="w-[90%] max-w-lg rounded-2xl bg-neutral-50 shadow-2xl md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl"
+      class="w-[90%] max-w-lg rounded-2xl bg-neutral-100 shadow-2xl md:max-w-md lg:max-w-lg xl:max-w-xl 2xl:max-w-2xl"
     >
       <div class="flex items-center justify-between p-4">
         <div class="text-xl font-semibold text-neutral-800 dark:text-gray-300">

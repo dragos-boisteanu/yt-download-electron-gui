@@ -46,11 +46,13 @@ const downloadVideo = async () => {
 
     emits('download')
 
-    bridge.downloadVideo(
-      props.videoDetails.url,
-      props.format.format_id,
-      props.audioFormat.format_id,
-    )
+    bridge.downloadVideo({
+      url: props.videoDetails.url,
+      videoId: props.format.format_id,
+      audioId: props.audioFormat.format_id,
+      uniqueId: `${props.format.format_id}:${props.audioFormat.format_id}`,
+      title: props.videoDetails.title,
+    })
 
     historyStore
       .add(toRaw(props.videoDetails), toRaw(props.audioFormat), toRaw(props.format))
