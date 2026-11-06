@@ -100,7 +100,7 @@ const createMainWindow = () => {
     mainWindow.loadFile(path.join(__dirname, '../index.html'))
   }
 
-  // mainWindow.webContents.openDevTools()
+  mainWindow.webContents.openDevTools()
 
   mainWindow.on('maximize', () => {
     if (!mainWindow) {

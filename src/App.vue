@@ -9,11 +9,13 @@ import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
 import formatBytesToMB from '@/helpers/formatBytesToMB'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/solid'
+import { ClipboardDocumentIcon } from '@heroicons/vue/24/outline'
 import { vRipple } from '@/directives/vRipple'
 import WindowActions from '@/components/windowActions.vue'
 import SettingsComponent from '@/components/settings/settingsComponent.vue'
 import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
+import debounce from 'lodash-es/debounce'
 
 const historyStore = useHistoryStore()
 
@@ -36,7 +38,21 @@ const isSearchDisabled = computed(() => {
 })
 
 const videoUrl = ref<string>('')
-const requestVideoInfo = async () => {
+
+const requestVideoInfo = debounce(async () => {
+  if (isSearchDisabled.value) {
+    return
+  }
+
+  if (!videoUrl.value) {
+    return
+  }
+
+  const regex = /^https:\/\/www\.youtube\.com\/(?:shorts\/[a-zA-Z0-9_-]+|watch\?v=[a-zA-Z0-9_-]+)/
+  if (!regex.test(videoUrl.value)) {
+    return
+  }
+
   const bridge = (window as any).bridge
   if (!bridge) {
     return
@@ -58,6 +74,7 @@ const requestVideoInfo = async () => {
     if (!info.formats) {
       throw new Error('No formats')
     }
+
     // const audioFormats: MediaFormat = info.formats.filter(format => format.video_ext === 'none')
     videoFormats.value = info.formats
       .filter((format) => format.audio_ext === 'none' && format.filesize)
@@ -101,6 +118,23 @@ const requestVideoInfo = async () => {
   } finally {
     isLoadingVideoData.value = false
   }
+}, 250)
+
+onUnmounted(() => {
+  requestVideoInfo.cancel()
+})
+
+const pasteFromClipboard = async () => {
+  try {
+    videoUrl.value = await navigator.clipboard.readText()
+    requestVideoInfo()
+  } catch (error) {
+    console.error('pasteFromClipboard', error)
+  }
+}
+
+const clearVideoUrl = () => {
+  videoUrl.value = ''
 }
 
 const notificationStore = useNotificationStore()
@@ -148,7 +182,6 @@ const videoDownloadStarted = () => {
 
 const isMaximized = ref<boolean>(false)
 let removeListener: (() => void) | null = null
-
 const registerElectronListeners = () => {
   const bridge = (window as any).bridge
   if (!bridge) {
@@ -168,7 +201,6 @@ const registerElectronListeners = () => {
     }
   })
 }
-
 onUnmounted(() => {
   if (removeListener) {
     removeListener()
@@ -194,16 +226,16 @@ registerElectronListeners()
         type="text"
         class="size-full rounded-lg p-2 text-sm text-zinc-700 outline-0"
         placeholder="Paste YouTube video link"
+        @input="requestVideoInfo"
       />
 
       <button
-        @click="requestVideoInfo()"
+        @click="pasteFromClipboard"
         v-ripple
-        class="w-22 cursor-pointer rounded bg-sky-600 px-4 py-2 text-center text-sm text-white shadow transition-colors hover:bg-sky-500 active:bg-sky-700 disabled:cursor-default disabled:bg-neutral-400"
-        :class="{ '!cursor-wait': isLoadingVideoData }"
+        class="inset-shadow cursor-pointer rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
         :disabled="isSearchDisabled"
       >
-        Search
+        <ClipboardDocumentIcon class="size-5" />
       </button>
     </div>
 
