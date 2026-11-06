@@ -16,6 +16,7 @@ import SettingsComponent from '@/components/settings/settingsComponent.vue'
 import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
 import debounce from 'lodash-es/debounce'
+import VideoSkeletonLoader from '@/components/VideoSkeletonLoader.vue'
 
 const historyStore = useHistoryStore()
 
@@ -33,14 +34,14 @@ const percentage = ref<number>(0)
 const downloadState = ref<string>('')
 const isDownloading = ref<boolean>(false)
 
-const isSearchDisabled = computed(() => {
+const isSearching = computed(() => {
   return isLoadingVideoData.value || isDownloading.value
 })
 
 const videoUrl = ref<string>('')
 
 const requestVideoInfo = debounce(async () => {
-  if (isSearchDisabled.value) {
+  if (isSearching.value) {
     return
   }
 
@@ -131,10 +132,6 @@ const pasteFromClipboard = async () => {
   } catch (error) {
     console.error('pasteFromClipboard', error)
   }
-}
-
-const clearVideoUrl = () => {
-  videoUrl.value = ''
 }
 
 const notificationStore = useNotificationStore()
@@ -233,7 +230,7 @@ registerElectronListeners()
         @click="pasteFromClipboard"
         v-ripple
         class="inset-shadow cursor-pointer rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
-        :disabled="isSearchDisabled"
+        :disabled="isSearching"
       >
         <ClipboardDocumentIcon class="size-5" />
       </button>
@@ -270,7 +267,10 @@ registerElectronListeners()
       <div
         class="min-h-0 w-full flex-1 scrollbar-gutter-auto overflow-y-auto rounded-xl bg-zinc-100 px-2 inset-shadow-sm"
       >
-        <template v-if="selectedTab === 0">
+        <template v-if="isSearching">
+          <video-skeleton-loader v-for="i in 4" :key="i" />
+        </template>
+        <template v-else-if="selectedTab === 0">
           <video-component
             v-for="format in videoFormats"
             :key="format.format_id"
@@ -281,8 +281,7 @@ registerElectronListeners()
             @download="videoDownloadStarted()"
           />
         </template>
-
-        <template v-if="selectedTab === 1">
+        <template v-else-if="selectedTab === 1">
           <video-component
             v-for="historyItem in historyStore.history"
             :key="historyItem.videoFormat.format_id"
