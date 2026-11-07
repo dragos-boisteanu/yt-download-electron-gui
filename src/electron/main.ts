@@ -1,4 +1,13 @@
-import { app, BrowserWindow, shell, dialog, ipcMain, IpcMainEvent, Notification } from 'electron'
+import {
+  app,
+  BrowserWindow,
+  shell,
+  dialog,
+  ipcMain,
+  IpcMainEvent,
+  Notification,
+  Menu,
+} from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { spawn } from 'node:child_process'
@@ -77,6 +86,24 @@ try {
   console.error()
 }
 
+const initContextMenu = (mainWindow: BrowserWindow): Menu => {
+  const menu = Menu.buildFromTemplate([
+    { role: 'copy' },
+    { role: 'cut' },
+    { role: 'paste' },
+    { role: 'selectAll' },
+  ])
+
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    // only show the context menu if the element is editable
+    if (params.isEditable) {
+      menu.popup()
+    }
+  })
+
+  return menu
+}
+
 let mainWindow: BrowserWindow | null = null
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
@@ -91,6 +118,8 @@ const createMainWindow = () => {
       contextIsolation: true,
     },
   })
+
+  initContextMenu(mainWindow)
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
