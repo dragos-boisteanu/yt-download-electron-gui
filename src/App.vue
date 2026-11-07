@@ -17,6 +17,7 @@ import { useHistoryStore } from '@/stores/history'
 import { useNotificationStore } from '@/stores/notification'
 import debounce from 'lodash-es/debounce'
 import VideoSkeletonLoader from '@/components/VideoSkeletonLoader.vue'
+import QueueToggler from '@/components/queue/queueToggler.vue'
 
 const historyStore = useHistoryStore()
 
@@ -160,6 +161,9 @@ const registerDownloadProgressListener = () => {
         if (progress.status === 'completed') {
           title = 'Video downloaded successfully.'
           body = `${progress.title} downloaded successfully.`
+
+          //TODO: if there is a video in queue begin downloading it
+          //TODO: redesign the download logic
         } else {
           title = 'Download failed'
           body = `Failed to download ${progress.title}`
@@ -211,7 +215,13 @@ registerElectronListeners()
   <div class="flex h-screen w-full flex-col gap-y-2 overflow-hidden bg-zinc-50 p-4 pt-2">
     <div class="flex w-full items-center justify-between [-webkit-app-region:drag]">
       <settings-component />
-      <window-actions :isMaximized="isMaximized" />
+
+      <div class="flex items-center gap-x-4">
+        <div class="[-webkit-app-region:no-drag]">
+          <queue-toggler />
+        </div>
+        <window-actions :isMaximized="isMaximized" />
+      </div>
     </div>
     <!-- Header Input Section -->
     <div

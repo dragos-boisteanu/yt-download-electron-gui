@@ -5,8 +5,10 @@ import { vRipple } from '@/directives/vRipple'
 import { TrashIcon } from '@heroicons/vue/24/outline'
 import { useHistoryStore } from '@/stores/history'
 import { toRaw } from 'vue'
+import { useQueueStore } from '@/stores/queue'
 
 const historyStore = useHistoryStore()
+const queueStore = useQueueStore()
 
 const props = defineProps<{
   format: MediaFormat
@@ -38,6 +40,8 @@ const downloadVideo = async () => {
   if (!props.audioFormat) {
     return
   }
+
+  //TODO: if there is an active download add this one to the queue
 
   try {
     if (!(props.videoDetails && props.audioFormat && props.format)) {
