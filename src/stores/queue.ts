@@ -3,7 +3,7 @@ import { computed, ref } from 'vue'
 import { QueueItem } from '@/types/QueueItemInterface'
 
 export const useQueueStore = defineStore('queueStore', () => {
-  const list = ref<any[]>([])
+  const list = ref<QueueItem[]>([])
   const hasItems = computed(() => list.value.length > 0)
 
   const add = (download: QueueItem): void => {
@@ -11,7 +11,7 @@ export const useQueueStore = defineStore('queueStore', () => {
   }
 
   const remove = (itemId: string): void => {
-    const itemIndex = list.value.findIndex((e) => e.id === itemId)
+    const itemIndex = list.value.findIndex((e) => e.uniqueId === itemId)
     if (itemIndex === -1) {
       return
     }

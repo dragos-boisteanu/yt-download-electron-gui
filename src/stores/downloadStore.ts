@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { ref, toRaw } from 'vue'
 import { YtDlpProgress } from '@/types/YtDlpProgress'
 import { useNotificationStore } from '@/stores/notification'
 import { useQueueStore } from '@/stores/queue'
@@ -30,6 +30,7 @@ export const useDownloadStore = defineStore('downloadStore', () => {
         downloadState.value = progress.message
       }
 
+      //TODO: split this in multiple dedicate functions
       if (progress.status === 'completed' || progress.status === 'error') {
         isDownloading.value = false
         let title: string
@@ -61,17 +62,22 @@ export const useDownloadStore = defineStore('downloadStore', () => {
             .catch((error) => console.error('saveVideoToHistory', error))
         }
 
-        // if (queueStore.hasItems) {
-        //   const nextItem = queueStore.getNextItem()
-        //   startDownload(nextItem)
-        //
-        //   notificationStore.showNotification({
-        //     openApp: true,
-        //     body: `Downloading ${nextItem.title}`,
-        //     title: 'Next download started',
-        //     uniqueId: progress.item.uniqueId,
-        //   })
-        // }
+        if (queueStore.hasItems) {
+          setTimeout(() => {
+            const nextItem = queueStore.getNextItem()
+            startDownload(toRaw(nextItem))
+
+            // TODO: make dedicated setting for queened video download start
+            /* if (notificationStore.canShowNotification) {
+              notificationStore.showNotification({
+                openApp: true,
+                body: `Downloading ${nextItem.title}`,
+                title: 'Next download started',
+                uniqueId: progress.item.uniqueId,
+              })
+            }*/
+          }, 1000)
+        }
       }
     })
   }
@@ -80,6 +86,11 @@ export const useDownloadStore = defineStore('downloadStore', () => {
     const bridge = (window as any).bridge
 
     if (!bridge) {
+      return
+    }
+
+    if (isDownloading.value) {
+      queueStore.add({ ...payload, order: queueStore.list.length })
       return
     }
 

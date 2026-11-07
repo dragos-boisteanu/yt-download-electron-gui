@@ -17,6 +17,7 @@ import VideoSkeletonLoader from '@/components/VideoSkeletonLoader.vue'
 import QueueToggler from '@/components/queue/queueToggler.vue'
 import { useDownloadStore } from '@/stores/downloadStore'
 import { DownloadItem } from '@/types/DownloadItem'
+import formatSeconds from '@/helpers/formatSeconds'
 
 const historyStore = useHistoryStore()
 
@@ -53,6 +54,7 @@ const requestVideoInfo = debounce(async () => {
 
   try {
     isLoadingVideoData.value = true
+    selectedTab.value = 0
 
     const info: VideoInfo = await bridge.getVideoInfo(videoUrl.value)
 
@@ -89,7 +91,7 @@ const requestVideoInfo = debounce(async () => {
           audioId: highestAudioFormat.format_id,
           url: videoUrl.value,
           codec: getFriendlyCodecName(format.vcodec),
-          duration: info.duration.toString(),
+          duration: formatSeconds(info.duration),
           size: formatBytesToMB(format.filesize),
           resolution: format.resolution,
           thumbnail: info.thumbnail,
@@ -97,17 +99,6 @@ const requestVideoInfo = debounce(async () => {
           uniqueId: `${format.format_id}:${highestAudioFormat.format_id}`,
         }
       })
-
-    const videoDetails = {
-      title: info.title,
-      duration: info.duration_string,
-      thumbnail: info.thumbnail,
-      url: info.webpage_url,
-    }
-
-    if (videoDetails && audioFormats.length > 0) {
-      selectedTab.value = 0
-    }
   } catch (error) {
     console.error('loadVideoData', error)
   } finally {
@@ -201,7 +192,7 @@ onUnmounted(() => {
         <div
           @click="selectedTab = 0"
           class="p-2 text-sm text-zinc-900"
-          v-if="downloadItems.length > 0"
+          v-if="downloadItems.length > 0 || isLoadingVideoData"
           :class="{
             'font-semibold': selectedTab === 0,
             'cursor-pointer': selectedTab !== 0,

@@ -17,7 +17,7 @@ const download = () => {
 </script>
 
 <template>
-  <icon-button @click="download" :disabled="downloadStore.isDownloading">
+  <icon-button @click="download">
     <ArrowDownOnSquareIcon class="size-4" />
   </icon-button>
 </template>
