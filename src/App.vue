@@ -232,13 +232,13 @@ registerElectronListeners()
       />
 
       <button
-        v-if="videoUrl !== ''"
+        v-if="videoUrl !== '' && !isSearching"
         @click="clearUrl"
         v-ripple
         class="inset-shadow cursor-pointer rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
         :disabled="isSearching"
       >
-        <XMarkIcon class="size-5" />
+        <XMarkIcon class="size-4" />
       </button>
     </div>
 
