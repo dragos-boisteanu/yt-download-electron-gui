@@ -1,22 +1,20 @@
 <script setup lang="ts">
-import { MediaFormat } from '@/types/MediaFormat'
-import { VideoDetails } from '@/types/VideoDetails'
 import { TrashIcon } from '@heroicons/vue/24/outline'
 import { useHistoryStore } from '@/stores/history'
 import DownloadVideoButton from '@/components/buttons/downloadVideoButton.vue'
+import { DownloadItem } from '@/types/DownloadItem'
+import { computed } from 'vue'
 
 const historyStore = useHistoryStore()
 
 const props = defineProps<{
-  format: MediaFormat
-  videoDetails: VideoDetails | null
-  audioFormat?: MediaFormat
+  item: DownloadItem
   canDelete?: boolean
 }>()
 
 const removeHistoryItem = () => {
   historyStore
-    .remove(props.format.format_id)
+    .remove(props.item.videoId)
     .catch((error) => console.error('removeHistoryItem', error))
 }
 </script>
@@ -37,7 +35,7 @@ const removeHistoryItem = () => {
       <div class="h-16 w-26 rounded-lg bg-zinc-500">
         <img
           class="size-full rounded-lg object-cover"
-          :src="props.videoDetails?.thumbnail ? props.videoDetails?.thumbnail : ''"
+          :src="props.item.thumbnail ? props.item.thumbnail : ''"
         />
       </div>
 
@@ -47,16 +45,16 @@ const removeHistoryItem = () => {
         <div class="flex min-w-0 flex-1 flex-col justify-start gap-y-0.5">
           <!-- Truncates to 1 line with ellipsis -->
           <div class="truncate text-sm font-semibold text-zinc-900">
-            {{ props.videoDetails?.title }}
+            {{ props.item.title }}
           </div>
           <div class="flex items-center gap-x-2">
             <div class="text-xs text-zinc-900">
               <span class="pr-1 font-semibold">Duration:</span>
-              <span> {{ props.videoDetails?.duration }}</span>
+              <span> {{ props.item.duration }}</span>
             </div>
             <div class="text-xs text-zinc-900">
               <span class="pr-1 font-semibold">Size:</span>
-              <span>{{ props.format.formattedFileSize }}</span>
+              <span>{{ props.item.size }}</span>
             </div>
           </div>
         </div>
@@ -68,23 +66,17 @@ const removeHistoryItem = () => {
         <div
           class="w-20 rounded-md border border-orange-100 bg-orange-50 px-2 py-1 text-center text-xs text-orange-700"
         >
-          {{ props.format.resolution }}
+          {{ props.item.resolution }}
         </div>
 
         <div
           class="w-12 justify-center rounded-md bg-slate-100 px-2 py-1 text-center text-xs font-bold text-slate-600"
         >
-          {{ props.format.formattedCodec }}
+          {{ props.item.codec }}
         </div>
       </div>
 
-      <download-video-button
-        :title="props.videoDetails.title"
-        :url="props.videoDetails.url"
-        :video-id="props.format.format_id"
-        :audio-id="props.audioFormat.format_id"
-        :unique-id="`${props.format.format_id}:${props.audioFormat.format_id}`"
-      />
+      <download-video-button :item="props.item" />
     </div>
   </div>
 </template>

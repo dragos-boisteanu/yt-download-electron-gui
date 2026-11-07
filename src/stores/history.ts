@@ -1,40 +1,27 @@
 import { defineStore } from 'pinia'
-import { DownloadsHistory } from '@/types/DownloadsHistory'
 import { ref } from 'vue'
 import { get, update } from 'idb-keyval'
-import { VideoDetails } from '@/types/VideoDetails'
-import { MediaFormat } from '@/types/MediaFormat'
+import { DownloadItem } from '@/types/DownloadItem'
 
 export const useHistoryStore = defineStore('historyStore', () => {
-  const history = ref<DownloadsHistory[]>([])
+  const history = ref<DownloadItem[]>([])
 
-  const add = async (
-    videoDetails: VideoDetails,
-    audioFormat: MediaFormat,
-    videoFormat: MediaFormat,
-  ) => {
+  const add = async (item: DownloadItem) => {
     try {
-      const newHistoryEntry: DownloadsHistory = {
-        videoDetails,
-        audioFormat,
-        videoFormat,
-      }
-
       await update('downloadsHistory', (value) => {
         if (value) {
           const entryIndex = value.findIndex(
-            (entry: DownloadsHistory) =>
-              entry.videoDetails.url === newHistoryEntry.videoDetails.url,
+            (entry: DownloadItem) => entry.uniqueId === item.uniqueId,
           )
 
           if (entryIndex === -1) {
-            value.push(newHistoryEntry)
+            value.push(item)
           } else {
-            value.splice(entryIndex, 1, newHistoryEntry)
+            value.splice(entryIndex, 1, item)
           }
         } else {
-          const history: DownloadsHistory[] = []
-          history.push(newHistoryEntry)
+          const history: DownloadItem[] = []
+          history.push(item)
 
           value = history
         }
@@ -43,25 +30,23 @@ export const useHistoryStore = defineStore('historyStore', () => {
       })
 
       const entryIndex = history.value.findIndex(
-        (entry: DownloadsHistory) => entry.videoDetails.url === newHistoryEntry.videoDetails.url,
+        (entry: DownloadItem) => entry.uniqueId === item.uniqueId,
       )
 
       if (entryIndex === -1) {
-        history.value.push(newHistoryEntry)
+        history.value.push(item)
       } else {
-        history.value.splice(entryIndex, 1, newHistoryEntry)
+        history.value.splice(entryIndex, 1, item)
       }
     } catch (error) {
       throw error
     }
   }
 
-  const remove = async (formatId: string) => {
+  const remove = async (uniqueId: string) => {
     try {
       await update('downloadsHistory', (values) => {
-        const formatIndex = values.findIndex(
-          (v: DownloadsHistory) => v.videoFormat.format_id === formatId,
-        )
+        const formatIndex = values.findIndex((item: DownloadItem) => item.uniqueId === uniqueId)
 
         if (formatIndex === -1) {
           return values
@@ -71,7 +56,7 @@ export const useHistoryStore = defineStore('historyStore', () => {
       })
 
       const formatIndex = history.value.findIndex(
-        (v: DownloadsHistory) => v.videoFormat.format_id === formatId,
+        (item: DownloadItem) => item.uniqueId === uniqueId,
       )
 
       if (formatIndex > -1) {
@@ -93,6 +78,7 @@ export const useHistoryStore = defineStore('historyStore', () => {
       console.error('getHistory', error)
     }
   }
+
   getHistory()
 
   return {

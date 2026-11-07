@@ -19,7 +19,7 @@ export const useQueueStore = defineStore('queueStore', () => {
     list.value.splice(itemIndex, 1)
   }
 
-  const getNextItem = () => {
+  const getNextItem = (): QueueItem | undefined => {
     if (list.value.length === 0) {
       return
     }

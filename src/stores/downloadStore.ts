@@ -1,8 +1,10 @@
 import { defineStore } from 'pinia'
-import { ref, toRaw } from 'vue'
+import { ref } from 'vue'
 import { YtDlpProgress } from '@/types/YtDlpProgress'
 import { useNotificationStore } from '@/stores/notification'
-import { DownloadPayload } from '@/types/DownloadPayload'
+import { useQueueStore } from '@/stores/queue'
+import { useHistoryStore } from '@/stores/history'
+import { DownloadItem } from '@/types/DownloadItem'
 
 export const useDownloadStore = defineStore('downloadStore', () => {
   const percentage = ref<number>(0)
@@ -10,7 +12,8 @@ export const useDownloadStore = defineStore('downloadStore', () => {
   const isDownloading = ref<boolean>(false)
 
   const notificationStore = useNotificationStore()
-  // const historyStore = useHistoryStore()
+  const queueStore = useQueueStore()
+  const historyStore = useHistoryStore()
 
   const registerDownloadProgressListener = () => {
     const bridge = (window as any).bridge
@@ -29,32 +32,51 @@ export const useDownloadStore = defineStore('downloadStore', () => {
 
       if (progress.status === 'completed' || progress.status === 'error') {
         isDownloading.value = false
+        let title: string
+        let body: string
+
+        const isCompleted = progress.status === 'completed'
 
         if (notificationStore.canShowNotification) {
-          let title: string
-          let body: string
-
-          if (progress.status === 'completed') {
+          if (isCompleted) {
             title = 'Video downloaded successfully.'
-            body = `${progress.title} downloaded successfully.`
-
-            //TODO: adapt history store to the new downloads logic
-            // historyStore
-            //   .add(toRaw(props.videoDetails), toRaw(props.audioFormat), toRaw(props.format))
-            //   .catch((error: any) => console.error('saveDownloadVideoHistory', error))
-
-            //TODO: if there is a video in queue begin downloading it
+            body = `${progress.item.title} downloaded successfully.`
           } else {
             title = 'Download failed'
             body = `Failed to download ${progress.title}`
           }
-          notificationStore.showNotification(title, body, progress.title || '', progress.uniqueId)
+
+          notificationStore.showNotification({
+            openFolder: true,
+            body,
+            title,
+            uniqueId: progress.item.uniqueId,
+            fileName: progress.item.title,
+          })
         }
+
+        if (isCompleted) {
+          historyStore
+            .add(progress.item)
+            .catch((error) => console.error('saveVideoToHistory', error))
+        }
+
+        // if (queueStore.hasItems) {
+        //   const nextItem = queueStore.getNextItem()
+        //   startDownload(nextItem)
+        //
+        //   notificationStore.showNotification({
+        //     openApp: true,
+        //     body: `Downloading ${nextItem.title}`,
+        //     title: 'Next download started',
+        //     uniqueId: progress.item.uniqueId,
+        //   })
+        // }
       }
     })
   }
 
-  const startDownload = (payload: DownloadPayload) => {
+  const startDownload = (payload: DownloadItem) => {
     const bridge = (window as any).bridge
 
     if (!bridge) {
@@ -63,14 +85,10 @@ export const useDownloadStore = defineStore('downloadStore', () => {
 
     isDownloading.value = true
     downloadState.value = 'Initiating...'
+    percentage.value = 0
 
-    bridge.downloadVideo({
-      url: payload.url,
-      videoId: payload.videoId,
-      audioId: payload.audioId,
-      uniqueId: `${payload.videoId}:${payload.audioId}`,
-      title: payload.title,
-    })
+    //TODO: do something to reset app state if the download doesn't start
+    bridge.downloadVideo(payload)
   }
 
   return {

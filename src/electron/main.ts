@@ -15,7 +15,7 @@ import { VideoInfo } from '@/types/VideoInfo'
 import fs from 'node:fs'
 import fsPromises from 'fs/promises'
 import { NotificationPayload } from '@/types/NotificationPayload'
-import { DownloadPayload } from '@/types/DownloadPayload'
+import { DownloadItem } from '@/types/DownloadItem'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -256,22 +256,34 @@ ipcMain.on('showNotification', (_event: IpcMainEvent, payload: NotificationPaylo
   })
 
   notification.on('click', () => {
-    const folderPath = path.join(downloadsFolder, `${payload.fileName}.${EXTENSION}`)
-    shell.showItemInFolder(folderPath)
+    if (payload.openApp) {
+      if (mainWindow) {
+        mainWindow.focus()
+        if (mainWindow.isMinimized()) {
+          mainWindow.maximize()
+        }
+      }
+      return
+    }
+
+    if (payload.openFolder) {
+      const folderPath = path.join(downloadsFolder, `${payload.fileName}.${EXTENSION}`)
+      console.log('folderPath', folderPath)
+      shell.showItemInFolder(folderPath)
+    }
   })
 
   notification.show()
 })
 
-ipcMain.on('downloadVideo', (event, payload: DownloadPayload) => {
+ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
   if (!ytDlpPath) {
     //TODO: better handling case when ytDlpPath is not set
     event.sender.send('downloadProgress', {
       status: 'error',
       message: `Download failed. The yt-dlp.exe path is not set`,
       percentage: 0,
-      uniqueId: payload.uniqueId,
-      title: payload.title,
+      item: payload,
     })
 
     return
@@ -311,8 +323,6 @@ ipcMain.on('downloadVideo', (event, payload: DownloadPayload) => {
           size: 'N/A',
           speed: 'N/A',
           eta: 'N/A',
-          title: payload.title,
-          uniqueId: payload.uniqueId,
         })
       }
       return
@@ -374,8 +384,7 @@ ipcMain.on('downloadVideo', (event, payload: DownloadPayload) => {
         size: 'N/A',
         speed: '0B/s',
         eta: '00:00',
-        title: payload.title,
-        uniqueId: payload.uniqueId,
+        item: payload,
       })
     } else {
       event.sender.send('downloadProgress', {

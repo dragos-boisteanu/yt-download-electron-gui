@@ -2,29 +2,17 @@
 import { ArrowDownOnSquareIcon } from '@heroicons/vue/24/outline'
 import IconButton from '@/components/buttons/iconButton.vue'
 import { useDownloadStore } from '@/stores/downloadStore'
+import { DownloadItem } from '@/types/DownloadItem'
+import { toRaw } from 'vue'
 
 const downloadStore = useDownloadStore()
 
 const props = defineProps<{
-  url: string
-  videoId: string
-  audioId: string
-  uniqueId: string
-  title: string
+  item: DownloadItem
 }>()
 
 const download = () => {
-  if (!props.videoId || !props.url || !props.audioId) {
-    return
-  }
-
-  downloadStore.startDownload({
-    url: props.url,
-    videoId: props.videoId,
-    audioId: props.audioId,
-    uniqueId: props.uniqueId,
-    title: props.title,
-  })
+  downloadStore.startDownload(toRaw(props.item))
 }
 </script>
 

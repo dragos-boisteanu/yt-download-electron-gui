@@ -3,7 +3,6 @@ import { onUnmounted, ref } from 'vue'
 import VideoComponent from '@/components/videoComponent.vue'
 import { VideoInfo } from '@/types/VideoInfo'
 import { MediaFormat } from '@/types/MediaFormat'
-import { VideoDetails } from '@/types/VideoDetails'
 import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
 import formatBytesToMB from '@/helpers/formatBytesToMB'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
@@ -17,16 +16,13 @@ import debounce from 'lodash-es/debounce'
 import VideoSkeletonLoader from '@/components/VideoSkeletonLoader.vue'
 import QueueToggler from '@/components/queue/queueToggler.vue'
 import { useDownloadStore } from '@/stores/downloadStore'
+import { DownloadItem } from '@/types/DownloadItem'
 
 const historyStore = useHistoryStore()
 
 const isLoadingVideoData = ref<boolean>(false)
 
-const videoFormats = ref<MediaFormat[]>([])
-const videoDetails = ref<VideoDetails | null>(null)
-
-const audioFormats = ref<MediaFormat[]>([])
-const highestAudioFormat = ref<MediaFormat | undefined>(null)
+const downloadItems = ref<DownloadItem[]>([])
 
 const selectedTab = ref<number>(1)
 
@@ -68,8 +64,11 @@ const requestVideoInfo = debounce(async () => {
       throw new Error('No formats')
     }
 
-    // const audioFormats: MediaFormat = info.formats.filter(format => format.video_ext === 'none')
-    videoFormats.value = info.formats
+    const audioFormats = info.formats.filter((format) => format.audio_ext !== 'none')
+
+    const highestAudioFormat = audioFormats.at(-1)
+
+    downloadItems.value = info.formats
       .filter((format) => format.audio_ext === 'none' && format.filesize)
       .sort((a: MediaFormat, b: MediaFormat) => {
         // Primary: Compare height (e.g., 2400 vs 1080)
@@ -84,26 +83,29 @@ const requestVideoInfo = debounce(async () => {
         const fpsB = b.fps ?? 0
         return fpsB - fpsA // Higher FPS first
       })
-      .map((format) => {
+      .map((format): DownloadItem => {
         return {
-          ...format,
-          formattedCodec: getFriendlyCodecName(format.vcodec),
-          formattedFileSize: formatBytesToMB(format.filesize),
+          videoId: format.format_id,
+          audioId: highestAudioFormat.format_id,
+          url: videoUrl.value,
+          codec: getFriendlyCodecName(format.vcodec),
+          duration: info.duration.toString(),
+          size: formatBytesToMB(format.filesize),
+          resolution: format.resolution,
+          thumbnail: info.thumbnail,
+          title: info.title,
+          uniqueId: `${format.format_id}:${highestAudioFormat.format_id}`,
         }
       })
 
-    audioFormats.value = info.formats.filter((format) => format.audio_ext !== 'none')
-
-    highestAudioFormat.value = audioFormats.value.at(-1)
-
-    videoDetails.value = {
+    const videoDetails = {
       title: info.title,
       duration: info.duration_string,
       thumbnail: info.thumbnail,
       url: info.webpage_url,
     }
 
-    if (videoDetails.value && audioFormats.value.length > 0) {
+    if (videoDetails && audioFormats.length > 0) {
       selectedTab.value = 0
     }
   } catch (error) {
@@ -199,7 +201,7 @@ onUnmounted(() => {
         <div
           @click="selectedTab = 0"
           class="p-2 text-sm text-zinc-900"
-          v-if="videoFormats.length > 0"
+          v-if="downloadItems.length > 0"
           :class="{
             'font-semibold': selectedTab === 0,
             'cursor-pointer': selectedTab !== 0,
@@ -227,21 +229,13 @@ onUnmounted(() => {
           <video-skeleton-loader v-for="i in 4" :key="i" />
         </template>
         <template v-else-if="selectedTab === 0">
-          <video-component
-            v-for="format in videoFormats"
-            :key="format.format_id"
-            :videoDetails="videoDetails"
-            :audioFormat="highestAudioFormat"
-            :format="format"
-          />
+          <video-component v-for="item in downloadItems" :key="item.videoId" :item="item" />
         </template>
         <template v-else-if="selectedTab === 1">
           <video-component
             v-for="historyItem in historyStore.history"
-            :key="historyItem.videoFormat.format_id"
-            :videoDetails="historyItem.videoDetails"
-            :audioFormat="historyItem.audioFormat"
-            :format="historyItem.videoFormat"
+            :key="historyItem.videoId"
+            :item="historyItem"
             :canDelete="true"
           />
         </template>
