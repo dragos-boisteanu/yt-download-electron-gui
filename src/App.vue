@@ -9,7 +9,7 @@ import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
 import formatBytesToMB from '@/helpers/formatBytesToMB'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/solid'
-import { ClipboardDocumentIcon } from '@heroicons/vue/24/outline'
+import { XMarkIcon } from '@heroicons/vue/24/outline'
 import { vRipple } from '@/directives/vRipple'
 import WindowActions from '@/components/windowActions.vue'
 import SettingsComponent from '@/components/settings/settingsComponent.vue'
@@ -126,13 +126,8 @@ onUnmounted(() => {
   requestVideoInfo.cancel()
 })
 
-const pasteFromClipboard = async () => {
-  try {
-    videoUrl.value = await navigator.clipboard.readText()
-    requestVideoInfo()
-  } catch (error) {
-    console.error('pasteFromClipboard', error)
-  }
+const clearUrl = () => {
+  videoUrl.value = ''
 }
 
 const notificationStore = useNotificationStore()
@@ -237,12 +232,13 @@ registerElectronListeners()
       />
 
       <button
-        @click="pasteFromClipboard"
+        v-if="videoUrl !== ''"
+        @click="clearUrl"
         v-ripple
         class="inset-shadow cursor-pointer rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
         :disabled="isSearching"
       >
-        <ClipboardDocumentIcon class="size-5" />
+        <XMarkIcon class="size-5" />
       </button>
     </div>
 
