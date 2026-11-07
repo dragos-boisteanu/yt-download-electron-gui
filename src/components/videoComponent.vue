@@ -1,70 +1,18 @@
 <script setup lang="ts">
 import { MediaFormat } from '@/types/MediaFormat'
 import { VideoDetails } from '@/types/VideoDetails'
-import { vRipple } from '@/directives/vRipple'
 import { TrashIcon } from '@heroicons/vue/24/outline'
 import { useHistoryStore } from '@/stores/history'
-import { toRaw } from 'vue'
-import { useQueueStore } from '@/stores/queue'
+import DownloadVideoButton from '@/components/buttons/downloadVideoButton.vue'
 
 const historyStore = useHistoryStore()
-const queueStore = useQueueStore()
 
 const props = defineProps<{
   format: MediaFormat
   videoDetails: VideoDetails | null
   audioFormat?: MediaFormat
-  isDownloading: boolean
   canDelete?: boolean
 }>()
-
-const emits = defineEmits<{
-  (e: 'download'): void
-}>()
-
-const downloadVideo = async () => {
-  const bridge = (window as any).bridge
-
-  if (!bridge) {
-    return
-  }
-
-  if (!props.videoDetails) {
-    return
-  }
-
-  if (!props.videoDetails.url) {
-    return
-  }
-
-  if (!props.audioFormat) {
-    return
-  }
-
-  //TODO: if there is an active download add this one to the queue
-
-  try {
-    if (!(props.videoDetails && props.audioFormat && props.format)) {
-      return
-    }
-
-    emits('download')
-
-    bridge.downloadVideo({
-      url: props.videoDetails.url,
-      videoId: props.format.format_id,
-      audioId: props.audioFormat.format_id,
-      uniqueId: `${props.format.format_id}:${props.audioFormat.format_id}`,
-      title: props.videoDetails.title,
-    })
-
-    historyStore
-      .add(toRaw(props.videoDetails), toRaw(props.audioFormat), toRaw(props.format))
-      .catch((error: any) => console.error('saveDownloadVideoHistory', error))
-  } catch (error: any) {
-    console.error('downloadVideo', error)
-  }
-}
 
 const removeHistoryItem = () => {
   historyStore
@@ -130,14 +78,13 @@ const removeHistoryItem = () => {
         </div>
       </div>
 
-      <button
-        :disabled="isDownloading"
-        @click="downloadVideo()"
-        v-ripple
-        class="shrink-0 cursor-pointer rounded bg-sky-600 p-2 text-sm text-white shadow transition-colors hover:bg-sky-500 disabled:cursor-default disabled:bg-neutral-400"
-      >
-        Download
-      </button>
+      <download-video-button
+        :title="props.videoDetails.title"
+        :url="props.videoDetails.url"
+        :video-id="props.format.format_id"
+        :audio-id="props.audioFormat.format_id"
+        :unique-id="`${props.format.format_id}:${props.audioFormat.format_id}`"
+      />
     </div>
   </div>
 </template>

@@ -1,10 +1,9 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import VideoComponent from '@/components/videoComponent.vue'
 import { VideoInfo } from '@/types/VideoInfo'
 import { MediaFormat } from '@/types/MediaFormat'
 import { VideoDetails } from '@/types/VideoDetails'
-import { YtDlpProgress } from '@/types/YtDlpProgress'
 import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
 import formatBytesToMB from '@/helpers/formatBytesToMB'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
@@ -14,10 +13,10 @@ import { vRipple } from '@/directives/vRipple'
 import WindowActions from '@/components/windowActions.vue'
 import SettingsComponent from '@/components/settings/settingsComponent.vue'
 import { useHistoryStore } from '@/stores/history'
-import { useNotificationStore } from '@/stores/notification'
 import debounce from 'lodash-es/debounce'
 import VideoSkeletonLoader from '@/components/VideoSkeletonLoader.vue'
 import QueueToggler from '@/components/queue/queueToggler.vue'
+import { useDownloadStore } from '@/stores/downloadStore'
 
 const historyStore = useHistoryStore()
 
@@ -31,18 +30,10 @@ const highestAudioFormat = ref<MediaFormat | undefined>(null)
 
 const selectedTab = ref<number>(1)
 
-const percentage = ref<number>(0)
-const downloadState = ref<string>('')
-const isDownloading = ref<boolean>(false)
-
-const isSearching = computed(() => {
-  return isLoadingVideoData.value || isDownloading.value
-})
-
 const videoUrl = ref<string>('')
 
 const requestVideoInfo = debounce(async () => {
-  if (isSearching.value) {
+  if (isLoadingVideoData.value) {
     return
   }
 
@@ -130,53 +121,11 @@ const clearUrl = () => {
   videoUrl.value = ''
 }
 
-const notificationStore = useNotificationStore()
-const registerDownloadProgressListener = () => {
-  const bridge = (window as any).bridge
-  if (!bridge) {
-    return
-  }
-
-  bridge.onDownloadProgress((progress: YtDlpProgress) => {
-    if (progress.percentage !== undefined && progress.percentage > 0) {
-      percentage.value = progress.percentage
-    }
-
-    if (progress.message) {
-      downloadState.value = progress.message
-    }
-
-    if (progress.status === 'completed' || progress.status === 'error') {
-      isDownloading.value = false
-
-      if (notificationStore.canShowNotification) {
-        let title: string
-        let body: string
-
-        if (progress.status === 'completed') {
-          title = 'Video downloaded successfully.'
-          body = `${progress.title} downloaded successfully.`
-
-          //TODO: if there is a video in queue begin downloading it
-          //TODO: redesign the download logic
-        } else {
-          title = 'Download failed'
-          body = `Failed to download ${progress.title}`
-        }
-        notificationStore.showNotification(title, body, progress.title || '', progress.uniqueId)
-      }
-    }
-  })
-}
-
-registerDownloadProgressListener()
-
-const videoDownloadStarted = () => {
-  isDownloading.value = true
-  downloadState.value = 'Initiating...'
-}
+const downloadStore = useDownloadStore()
+downloadStore.registerDownloadProgressListener()
 
 const isMaximized = ref<boolean>(false)
+
 let removeListener: (() => void) | null = null
 const registerElectronListeners = () => {
   const bridge = (window as any).bridge
@@ -197,12 +146,13 @@ const registerElectronListeners = () => {
     }
   })
 }
+registerElectronListeners()
+
 onUnmounted(() => {
   if (removeListener) {
     removeListener()
   }
 })
-registerElectronListeners()
 </script>
 
 <template>
@@ -232,11 +182,11 @@ registerElectronListeners()
       />
 
       <button
-        v-if="videoUrl !== '' && !isSearching"
+        v-if="videoUrl !== '' && !isLoadingVideoData"
         @click="clearUrl"
         v-ripple
         class="inset-shadow cursor-pointer rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
-        :disabled="isSearching"
+        :disabled="isLoadingVideoData"
       >
         <XMarkIcon class="size-4" />
       </button>
@@ -273,7 +223,7 @@ registerElectronListeners()
       <div
         class="min-h-0 w-full flex-1 scrollbar-gutter-auto overflow-y-auto rounded-xl bg-zinc-100 px-2 inset-shadow-sm"
       >
-        <template v-if="isSearching">
+        <template v-if="isLoadingVideoData">
           <video-skeleton-loader v-for="i in 4" :key="i" />
         </template>
         <template v-else-if="selectedTab === 0">
@@ -283,8 +233,6 @@ registerElectronListeners()
             :videoDetails="videoDetails"
             :audioFormat="highestAudioFormat"
             :format="format"
-            :isDownloading="isDownloading"
-            @download="videoDownloadStarted()"
           />
         </template>
         <template v-else-if="selectedTab === 1">
@@ -294,8 +242,6 @@ registerElectronListeners()
             :videoDetails="historyItem.videoDetails"
             :audioFormat="historyItem.audioFormat"
             :format="historyItem.videoFormat"
-            :isDownloading="isDownloading"
-            @download="videoDownloadStarted()"
             :canDelete="true"
           />
         </template>
@@ -303,7 +249,7 @@ registerElectronListeners()
     </div>
 
     <div class="w-full flex-0">
-      <progress-bar-component :percentage="percentage" :text="downloadState" />
+      <progress-bar-component />
     </div>
   </div>
 </template>

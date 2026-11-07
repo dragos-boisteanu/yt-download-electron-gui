@@ -1,17 +1,15 @@
 <script setup lang="ts">
 import { computed } from 'vue'
+import { useDownloadStore } from '@/stores/downloadStore'
 
-const props = defineProps<{
-  percentage: number
-  text: string
-}>()
+const downloadStore = useDownloadStore()
 
 const displayText = computed(() => {
-  if (props.percentage === 0 || props.percentage === 100) {
-    return props.text
+  if (downloadStore.percentage === 0 || downloadStore.percentage === 100) {
+    return downloadStore.downloadState
   }
 
-  return `${props.text} ${props.percentage}%`
+  return `${downloadStore.downloadState} ${downloadStore.percentage}%`
 })
 </script>
 <template>
@@ -24,7 +22,7 @@ const displayText = computed(() => {
     <!-- Top Layer: Blue background + White text (Clipped dynamically) -->
     <div
       class="absolute inset-0 flex items-center justify-center bg-sky-600 text-white transition-[clip-path] duration-200"
-      :style="{ clipPath: `inset(0 ${100 - props.percentage}% 0 0)` }"
+      :style="{ clipPath: `inset(0 ${100 - downloadStore.percentage}% 0 0)` }"
     >
       {{ displayText }}
     </div>
