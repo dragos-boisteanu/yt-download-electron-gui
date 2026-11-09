@@ -1,12 +1,13 @@
 import {
   app,
   BrowserWindow,
+  shell,
   dialog,
   ipcMain,
   IpcMainEvent,
-  IpcMainInvokeEvent,
   Notification,
-  shell,
+  Menu,
+  IpcMainInvokeEvent,
 } from 'electron'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
@@ -15,7 +16,7 @@ import { VideoInfo } from '@/types/VideoInfo'
 import fs from 'node:fs'
 import fsPromises from 'fs/promises'
 import { NotificationPayload } from '@/types/NotificationPayload'
-import { DownloadPayload } from '@/types/DownloadPayload'
+import { DownloadItem } from '@/types/DownloadItem'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -86,6 +87,24 @@ try {
   console.error()
 }
 
+const initContextMenu = (mainWindow: BrowserWindow): Menu => {
+  const menu = Menu.buildFromTemplate([
+    { role: 'copy' },
+    { role: 'cut' },
+    { role: 'paste' },
+    { role: 'selectAll' },
+  ])
+
+  mainWindow.webContents.on('context-menu', (_event, params) => {
+    // only show the context menu if the element is editable
+    if (params.isEditable) {
+      menu.popup()
+    }
+  })
+
+  return menu
+}
+
 let mainWindow: BrowserWindow | null = null
 const createMainWindow = () => {
   mainWindow = new BrowserWindow({
@@ -100,6 +119,8 @@ const createMainWindow = () => {
       contextIsolation: true,
     },
   })
+
+  initContextMenu(mainWindow)
 
   const devServerUrl = process.env.VITE_DEV_SERVER_URL
 
@@ -239,7 +260,19 @@ ipcMain.on('showNotification', (_event: IpcMainEvent, payload: NotificationPaylo
   })
 
   notification.on('click', () => {
-    shell.showItemInFolder(getDownloadedFilePath(payload.fileName))
+    if (payload.openApp) {
+      if (mainWindow) {
+        mainWindow.focus()
+        if (mainWindow.isMinimized()) {
+          mainWindow.maximize()
+        }
+      }
+      return
+    }
+
+    if (payload.openFolder) {
+      shell.showItemInFolder(getDownloadedFilePath(payload.fileName))
+    }
   })
 
   notification.show()
@@ -253,15 +286,14 @@ ipcMain.on('openInFolder', (_event: IpcMainEvent, title: string) => {
   shell.showItemInFolder(getDownloadedFilePath(title))
 })
 
-ipcMain.on('downloadVideo', (event, payload: DownloadPayload) => {
+ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
   if (!ytDlpPath) {
     //TODO: better handling case when ytDlpPath is not set
     event.sender.send('downloadProgress', {
       status: 'error',
       message: `Download failed. The yt-dlp.exe path is not set`,
       percentage: 0,
-      uniqueId: payload.uniqueId,
-      title: payload.title,
+      item: payload,
     })
 
     return
@@ -301,8 +333,6 @@ ipcMain.on('downloadVideo', (event, payload: DownloadPayload) => {
           size: 'N/A',
           speed: 'N/A',
           eta: 'N/A',
-          title: payload.title,
-          uniqueId: payload.uniqueId,
         })
       }
       return
@@ -364,8 +394,7 @@ ipcMain.on('downloadVideo', (event, payload: DownloadPayload) => {
         size: 'N/A',
         speed: '0B/s',
         eta: '00:00',
-        title: payload.title,
-        uniqueId: payload.uniqueId,
+        item: payload,
       })
     } else {
       event.sender.send('downloadProgress', {

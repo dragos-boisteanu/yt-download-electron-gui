@@ -1,28 +1,28 @@
 import { defineStore } from 'pinia'
 import { ref } from 'vue'
+import { NotificationPayload } from '@/types/NotificationPayload'
 
 export const useNotificationStore = defineStore('notificationStore', () => {
   const canShowNotification = ref<boolean>(true)
   let uniqueId: number = 0
 
-  const showNotification = (title: string, body: string, fileName: string, formatId?: string) => {
+  const showNotification = (payload: NotificationPayload) => {
     const bridge = (window as any).bridge
     if (!bridge) {
       return
     }
 
-    if (!formatId) {
-      formatId = (uniqueId++).toString()
+    if (!payload.uniqueId) {
+      payload.uniqueId = (uniqueId++).toString()
     }
 
-    console.log('showNotification', title, title, body, formatId)
+    if (payload.openApp) {
+      payload.tag = `download-started-${payload.uniqueId}-${Math.floor(new Date().getTime()) / 1000}`
+    } else {
+      payload.tag = `download-ready-${payload.uniqueId}-${Math.floor(new Date().getTime()) / 1000}`
+    }
 
-    bridge.showNotification({
-      title,
-      body,
-      tag: `download-ready-${formatId}-${Math.floor(new Date().getTime()) / 1000}`,
-      fileName: fileName,
-    })
+    bridge.showNotification(payload)
   }
 
   return {

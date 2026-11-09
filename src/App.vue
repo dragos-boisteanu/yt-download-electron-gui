@@ -1,42 +1,48 @@
 <script setup lang="ts">
-import { computed, onUnmounted, ref } from 'vue'
+import { onUnmounted, ref } from 'vue'
 import VideoComponent from '@/components/videoComponent.vue'
 import { VideoInfo } from '@/types/VideoInfo'
 import { MediaFormat } from '@/types/MediaFormat'
-import { VideoDetails } from '@/types/VideoDetails'
-import { YtDlpProgress } from '@/types/YtDlpProgress'
 import getFriendlyCodecName from '@/helpers/getFriendlyCodecName'
 import formatBytesToMB from '@/helpers/formatBytesToMB'
 import ProgressBarComponent from '@/components/progressBarComponent.vue'
 import { MagnifyingGlassIcon } from '@heroicons/vue/24/solid'
+import { XMarkIcon } from '@heroicons/vue/24/outline'
 import { vRipple } from '@/directives/vRipple'
 import WindowActions from '@/components/windowActions.vue'
 import SettingsComponent from '@/components/settings/settingsComponent.vue'
 import { useHistoryStore } from '@/stores/history'
-import { useNotificationStore } from '@/stores/notification'
+import debounce from 'lodash-es/debounce'
+import VideoSkeletonLoader from '@/components/VideoSkeletonLoader.vue'
+import QueueToggler from '@/components/queue/queueToggler.vue'
+import { useDownloadStore } from '@/stores/downloadStore'
+import { DownloadItem } from '@/types/DownloadItem'
+import formatSeconds from '@/helpers/formatSeconds'
 
 const historyStore = useHistoryStore()
 
 const isLoadingVideoData = ref<boolean>(false)
 
-const videoFormats = ref<MediaFormat[]>([])
-const videoDetails = ref<VideoDetails | null>(null)
-
-const audioFormats = ref<MediaFormat[]>([])
-const highestAudioFormat = ref<MediaFormat | undefined>(null)
+const downloadItems = ref<DownloadItem[]>([])
 
 const selectedTab = ref<number>(1)
 
-const percentage = ref<number>(0)
-const downloadState = ref<string>('')
-const isDownloading = ref<boolean>(false)
-
-const isSearchDisabled = computed(() => {
-  return isLoadingVideoData.value || isDownloading.value
-})
-
 const videoUrl = ref<string>('')
-const requestVideoInfo = async () => {
+
+const requestVideoInfo = debounce(async () => {
+  if (isLoadingVideoData.value) {
+    return
+  }
+
+  if (!videoUrl.value) {
+    return
+  }
+
+  const regex = /^https:\/\/www\.youtube\.com\/(?:shorts\/[a-zA-Z0-9_-]+|watch\?v=[a-zA-Z0-9_-]+)/
+  if (!regex.test(videoUrl.value)) {
+    return
+  }
+
   const bridge = (window as any).bridge
   if (!bridge) {
     return
@@ -48,6 +54,7 @@ const requestVideoInfo = async () => {
 
   try {
     isLoadingVideoData.value = true
+    selectedTab.value = 0
 
     const info: VideoInfo = await bridge.getVideoInfo(videoUrl.value)
 
@@ -58,8 +65,12 @@ const requestVideoInfo = async () => {
     if (!info.formats) {
       throw new Error('No formats')
     }
-    // const audioFormats: MediaFormat = info.formats.filter(format => format.video_ext === 'none')
-    videoFormats.value = info.formats
+
+    const audioFormats = info.formats.filter((format) => format.audio_ext !== 'none')
+
+    const highestAudioFormat = audioFormats.at(-1)
+
+    downloadItems.value = info.formats
       .filter((format) => format.audio_ext === 'none' && format.filesize)
       .sort((a: MediaFormat, b: MediaFormat) => {
         // Primary: Compare height (e.g., 2400 vs 1080)
@@ -74,81 +85,41 @@ const requestVideoInfo = async () => {
         const fpsB = b.fps ?? 0
         return fpsB - fpsA // Higher FPS first
       })
-      .map((format) => {
+      .map((format): DownloadItem => {
         return {
-          ...format,
-          formattedCodec: getFriendlyCodecName(format.vcodec),
-          formattedFileSize: formatBytesToMB(format.filesize),
+          videoId: format.format_id,
+          audioId: highestAudioFormat.format_id,
+          url: videoUrl.value,
+          codec: getFriendlyCodecName(format.vcodec),
+          duration: formatSeconds(info.duration),
+          size: formatBytesToMB(format.filesize),
+          resolution: format.resolution,
+          thumbnail: info.thumbnail,
+          title: info.title,
+          uniqueId: `${format.format_id}:${highestAudioFormat.format_id}`,
         }
       })
-
-    audioFormats.value = info.formats.filter((format) => format.audio_ext !== 'none')
-
-    highestAudioFormat.value = audioFormats.value.at(-1)
-
-    videoDetails.value = {
-      title: info.title,
-      duration: info.duration_string,
-      thumbnail: info.thumbnail,
-      url: info.webpage_url,
-    }
-
-    if (videoDetails.value && audioFormats.value.length > 0) {
-      selectedTab.value = 0
-    }
   } catch (error) {
     console.error('loadVideoData', error)
   } finally {
     isLoadingVideoData.value = false
   }
+}, 250)
+
+onUnmounted(() => {
+  requestVideoInfo.cancel()
+})
+
+const clearUrl = () => {
+  videoUrl.value = ''
 }
 
-const notificationStore = useNotificationStore()
-const registerDownloadProgressListener = () => {
-  const bridge = (window as any).bridge
-  if (!bridge) {
-    return
-  }
-
-  bridge.onDownloadProgress((progress: YtDlpProgress) => {
-    if (progress.percentage !== undefined && progress.percentage > 0) {
-      percentage.value = progress.percentage
-    }
-
-    if (progress.message) {
-      downloadState.value = progress.message
-    }
-
-    if (progress.status === 'completed' || progress.status === 'error') {
-      isDownloading.value = false
-
-      if (notificationStore.canShowNotification) {
-        let title: string
-        let body: string
-
-        if (progress.status === 'completed') {
-          title = 'Video downloaded successfully.'
-          body = `${progress.title} downloaded successfully.`
-        } else {
-          title = 'Download failed'
-          body = `Failed to download ${progress.title}`
-        }
-        notificationStore.showNotification(title, body, progress.title || '', progress.uniqueId)
-      }
-    }
-  })
-}
-
-registerDownloadProgressListener()
-
-const videoDownloadStarted = () => {
-  isDownloading.value = true
-  downloadState.value = 'Initiating...'
-}
+const downloadStore = useDownloadStore()
+downloadStore.registerDownloadProgressListener()
 
 const isMaximized = ref<boolean>(false)
-let removeListener: (() => void) | null = null
 
+let removeListener: (() => void) | null = null
 const registerElectronListeners = () => {
   const bridge = (window as any).bridge
   if (!bridge) {
@@ -168,13 +139,13 @@ const registerElectronListeners = () => {
     }
   })
 }
+registerElectronListeners()
 
 onUnmounted(() => {
   if (removeListener) {
     removeListener()
   }
 })
-registerElectronListeners()
 </script>
 
 <template>
@@ -182,7 +153,13 @@ registerElectronListeners()
   <div class="flex h-screen w-full flex-col gap-y-2 overflow-hidden bg-zinc-50 p-4 pt-2">
     <div class="flex w-full items-center justify-between [-webkit-app-region:drag]">
       <settings-component />
-      <window-actions :isMaximized="isMaximized" />
+
+      <div class="flex items-center gap-x-4">
+        <div class="[-webkit-app-region:no-drag]">
+          <queue-toggler />
+        </div>
+        <window-actions :isMaximized="isMaximized" />
+      </div>
     </div>
     <!-- Header Input Section -->
     <div
@@ -194,16 +171,17 @@ registerElectronListeners()
         type="text"
         class="size-full rounded-lg p-2 text-sm text-zinc-700 outline-0"
         placeholder="Paste YouTube video link"
+        @input="requestVideoInfo"
       />
 
       <button
-        @click="requestVideoInfo()"
+        v-if="videoUrl !== '' && !isLoadingVideoData"
+        @click="clearUrl"
         v-ripple
-        class="w-22 cursor-pointer rounded bg-sky-600 px-4 py-2 text-center text-sm text-white shadow transition-colors hover:bg-sky-500 active:bg-sky-700 disabled:cursor-default disabled:bg-neutral-400"
-        :class="{ '!cursor-wait': isLoadingVideoData }"
-        :disabled="isSearchDisabled"
+        class="inset-shadow cursor-pointer rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
+        :disabled="isLoadingVideoData"
       >
-        Search
+        <XMarkIcon class="size-4" />
       </button>
     </div>
 
@@ -214,7 +192,7 @@ registerElectronListeners()
         <div
           @click="selectedTab = 0"
           class="p-2 text-sm text-zinc-900"
-          v-if="videoFormats.length > 0"
+          v-if="downloadItems.length > 0 || isLoadingVideoData"
           :class="{
             'font-semibold': selectedTab === 0,
             'cursor-pointer': selectedTab !== 0,
@@ -238,27 +216,17 @@ registerElectronListeners()
       <div
         class="min-h-0 w-full flex-1 scrollbar-gutter-auto overflow-y-auto rounded-xl bg-zinc-100 px-2 inset-shadow-sm"
       >
-        <template v-if="selectedTab === 0">
-          <video-component
-            v-for="format in videoFormats"
-            :key="format.format_id"
-            :videoDetails="videoDetails"
-            :audioFormat="highestAudioFormat"
-            :format="format"
-            :isDownloading="isDownloading"
-            @download="videoDownloadStarted()"
-          />
+        <template v-if="isLoadingVideoData">
+          <video-skeleton-loader v-for="i in 4" :key="i" />
         </template>
-
-        <template v-if="selectedTab === 1">
+        <template v-else-if="selectedTab === 0">
+          <video-component v-for="item in downloadItems" :key="item.videoId" :item="item" />
+        </template>
+        <template v-else-if="selectedTab === 1">
           <video-component
             v-for="historyItem in historyStore.history"
-            :key="historyItem.videoFormat.format_id"
-            :videoDetails="historyItem.videoDetails"
-            :audioFormat="historyItem.audioFormat"
-            :format="historyItem.videoFormat"
-            :isDownloading="isDownloading"
-            @download="videoDownloadStarted()"
+            :key="historyItem.videoId"
+            :item="historyItem"
             :canDelete="true"
           />
         </template>
@@ -266,7 +234,7 @@ registerElectronListeners()
     </div>
 
     <div class="w-full flex-0">
-      <progress-bar-component :percentage="percentage" :text="downloadState" />
+      <progress-bar-component />
     </div>
   </div>
 </template>

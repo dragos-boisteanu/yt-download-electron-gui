@@ -1,4 +1,5 @@
 import { DownloadPhase } from '@/types/DownloadPhase'
+import { DownloadItem } from '@/types/DownloadItem'
 
 export interface YtDlpProgress {
   status: DownloadPhase
@@ -9,4 +10,5 @@ export interface YtDlpProgress {
   message?: string
   uniqueId?: string
   title?: string
+  item?: DownloadItem
 }
