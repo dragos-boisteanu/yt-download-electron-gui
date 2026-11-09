@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TrashIcon } from '@heroicons/vue/24/outline'
+import { TrashIcon, FolderOpenIcon } from '@heroicons/vue/24/outline'
 import { useHistoryStore } from '@/stores/history'
 import DownloadVideoButton from '@/components/buttons/downloadVideoButton.vue'
 import { DownloadItem } from '@/types/DownloadItem'
@@ -8,11 +8,15 @@ import { onMounted, ref } from 'vue'
 
 const historyStore = useHistoryStore()
 
-const props = defineProps<{
-  item: DownloadItem
-  canDelete?: boolean
-  isHistory: false
-}>()
+const props = withDefaults(
+  defineProps<{
+    item: DownloadItem
+    isHistory?: boolean
+  }>(),
+  {
+    isHistory: false,
+  },
+)
 
 const removeHistoryItem = () => {
   historyStore
@@ -28,14 +32,18 @@ const checkFile = async (): Promise<boolean> => {
     return false
   }
 
+  console.log('checkFileItemTitle:', props.item.title)
+
   return await bridge.checkFile(props.item.title)
 }
 
 const fileExists = ref<boolean>(false)
 onMounted(() => {
-  checkFile().then((response: boolean) => {
-    fileExists.value = response
-  })
+  if (props.isHistory) {
+    checkFile().then((response: boolean) => {
+      fileExists.value = response
+    })
+  }
 })
 
 const openInFolder = () => {
@@ -52,10 +60,6 @@ const openInFolder = () => {
   <div
     class="my-2 flex w-full flex-wrap items-center gap-x-2 rounded-lg bg-zinc-50 p-2 shadow hover:shadow-lg"
   >
-    <icon-button v-if="canDelete" @click="removeHistoryItem" class="hidden md:block">
-      <TrashIcon class="size-4"></TrashIcon>
-    </icon-button>
-
     <div class="flex min-w-96 flex-1 items-center gap-x-3 md:items-start">
       <div class="flex w-full min-w-64 items-center gap-x-3 md:items-start">
         <div class="h-16 w-26 shrink-0 rounded-lg bg-zinc-500">
@@ -115,7 +119,7 @@ const openInFolder = () => {
       </div>
 
       <div class="flex items-center gap-x-2">
-        <icon-button v-if="canDelete" @click="removeHistoryItem" class="block md:hidden">
+        <icon-button v-if="isHistory" @click="removeHistoryItem">
           <TrashIcon class="size-4"></TrashIcon>
         </icon-button>
 
@@ -126,7 +130,7 @@ const openInFolder = () => {
         >
           <FolderOpenIcon class="size-5" />
         </button>
-        <download-video-button v-else :item="props.item" />
+        <download-video-button v-if="!isHistory || (isHistory && !fileExists)" :item="props.item" />
       </div>
     </div>
   </div>

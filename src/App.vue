@@ -227,7 +227,7 @@ onUnmounted(() => {
             v-for="historyItem in historyStore.history"
             :key="historyItem.videoId"
             :item="historyItem"
-            :canDelete="true"
+            :isHistory="true"
           />
         </template>
       </div>

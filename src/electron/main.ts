@@ -190,7 +190,14 @@ ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
     ytDlp.on('close', (code) => {
       if (code === 0) {
         try {
-          resolve(JSON.parse(rawData))
+          const metadata = JSON.parse(rawData)
+
+          // Sanitize the title right here in JavaScript to replace colons with dashes
+          if (metadata.title) {
+            metadata.title = metadata.title.replace(/[:：]/g, '-')
+          }
+
+          resolve(metadata)
         } catch (e) {
           reject(new Error('Failed to parse metadata JSON'))
         }
@@ -314,6 +321,11 @@ ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
     '-o',
     outputTemplate, // Tells yt-dlp exactly where to save it
     '--newline', // Forces output on new lines for easier parsing
+    '--windows-filenames',
+    '--replace-in-metadata',
+    'title',
+    '[:：]',
+    '-',
     payload.url,
   ]
 
