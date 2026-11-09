@@ -17,6 +17,7 @@ import fs from 'node:fs'
 import fsPromises from 'fs/promises'
 import { NotificationPayload } from '@/types/NotificationPayload'
 import { DownloadItem } from '@/types/DownloadItem'
+import sanitizeVideoTitle from '../helpers/sanitizeVideoTitle.js'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -194,7 +195,7 @@ ipcMain.handle('getVideoInfo', async (event, url): Promise<VideoInfo> => {
 
           // Sanitize the title right here in JavaScript to replace colons with dashes
           if (metadata.title) {
-            metadata.title = metadata.title.replace(/[:：]/g, '-')
+            metadata.title = sanitizeVideoTitle(metadata.title)
           }
 
           resolve(metadata)
@@ -311,7 +312,7 @@ ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
   let lastReportedFloor = -1
 
   const formatSelection = `${payload.videoId}+${payload.audioId}` // e.g., "313+251"
-  const outputTemplate = path.join(downloadsFolder, '%(title)s.%(ext)s')
+  const outputTemplate = path.join(downloadsFolder, `${payload.title}.${EXTENSION}`)
 
   const args = [
     '-f',
@@ -319,13 +320,9 @@ ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
     '--merge-output-format',
     EXTENSION,
     '-o',
-    outputTemplate, // Tells yt-dlp exactly where to save it
+    outputTemplate,
     '--newline', // Forces output on new lines for easier parsing
     '--windows-filenames',
-    '--replace-in-metadata',
-    'title',
-    '[:：]',
-    '-',
     payload.url,
   ]
 
