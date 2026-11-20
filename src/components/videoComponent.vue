@@ -8,11 +8,17 @@ import { onMounted, ref } from 'vue'
 
 const historyStore = useHistoryStore()
 
-const props = defineProps<{
-  item: DownloadItem
-  canDelete?: boolean
-  isHistory: false
-}>()
+const props = withDefaults(
+  defineProps<{
+    item: DownloadItem
+    canDelete?: boolean
+    isHistory?: false
+  }>(),
+  {
+    canDelete: false,
+    isHistory: false,
+  },
+)
 
 const removeHistoryItem = () => {
   historyStore
