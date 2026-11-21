@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { TrashIcon } from '@heroicons/vue/24/outline'
+import { TrashIcon, FolderOpenIcon } from '@heroicons/vue/24/outline'
 import { useHistoryStore } from '@/stores/history'
 import DownloadVideoButton from '@/components/buttons/downloadVideoButton.vue'
 import { DownloadItem } from '@/types/DownloadItem'
