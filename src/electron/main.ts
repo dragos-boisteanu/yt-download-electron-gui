@@ -18,6 +18,8 @@ import fsPromises from 'fs/promises'
 import { NotificationPayload } from '@/types/NotificationPayload'
 import { DownloadItem } from '@/types/DownloadItem'
 import sanitizeVideoTitle from '../helpers/sanitizeVideoTitle.js'
+import { WatchEventType } from 'fs'
+import { WatchFilePayload } from '@/types/WatchFilePayload'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -139,7 +141,7 @@ const createMainWindow = () => {
     }
 
     mainWindow.webContents.send('app', {
-      action: 'maximize',
+      type: 'maximize',
     })
   })
 
@@ -149,7 +151,7 @@ const createMainWindow = () => {
     }
 
     mainWindow.webContents.send('app', {
-      action: 'unmaximize',
+      type: 'unmaximize',
     })
   })
 }
@@ -290,6 +292,68 @@ ipcMain.handle('checkFile', (_event: IpcMainInvokeEvent, title: string) => {
   return fs.existsSync(getDownloadedFilePath(title))
 })
 
+//TODO: add the unique id so it can be passed back to the render when the file is deleted
+const getFileWatchAbortControllersKey = (payload: WatchFilePayload) =>
+  `${payload.id}-${payload.title}`
+const fileWatchAbortControllers = new Map<string, AbortController>()
+ipcMain.on('watchFile', (_event: IpcMainEvent, payload: WatchFilePayload) => {
+  const key = getFileWatchAbortControllersKey(payload)
+
+  if (fileWatchAbortControllers.has(key)) {
+    console.log('watchFile - reset', key)
+    fileWatchAbortControllers.get(key).abort()
+    fileWatchAbortControllers.delete(key)
+  } else {
+    console.log('watchFile - new', key)
+  }
+
+  const abortController = new AbortController()
+  const filePath = getDownloadedFilePath(payload.title)
+
+  fs.watch(
+    filePath,
+    {
+      signal: abortController.signal,
+    },
+    (eventType: WatchEventType, filename: string) => {
+      console.log('watching - ', filename)
+      console.log('eventType', eventType)
+
+      if (eventType === 'rename' && fs.existsSync(filePath)) {
+        return
+      }
+
+      if (!mainWindow) {
+        return
+      }
+
+      mainWindow.webContents.send('app', {
+        type: 'fileRemoved',
+        payload: {
+          id: payload.id,
+        },
+      })
+
+      abortController.abort()
+      fileWatchAbortControllers.delete(key)
+    },
+  )
+
+  fileWatchAbortControllers.set(key, abortController)
+})
+
+ipcMain.on('unWatchFile', (_event: IpcMainEvent, payload: WatchFilePayload) => {
+  const key = getFileWatchAbortControllersKey(payload)
+
+  const abortController = fileWatchAbortControllers.get(key)
+  if (!abortController) {
+    return
+  }
+
+  abortController.abort()
+  fileWatchAbortControllers.delete(key)
+})
+
 ipcMain.on('openInFolder', (_event: IpcMainEvent, title: string) => {
   shell.showItemInFolder(getDownloadedFilePath(title))
 })
@@ -312,6 +376,8 @@ ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
   let lastReportedFloor = -1
 
   const formatSelection = `${payload.videoId}+${payload.audioId}` // e.g., "313+251"
+
+  //TODO: handle cases when the same video is downloaded multiple times with different formats
   const outputTemplate = path.join(downloadsFolder, `${payload.title}.${EXTENSION}`)
 
   const args = [

@@ -4,19 +4,13 @@ import { useHistoryStore } from '@/stores/history'
 import DownloadVideoButton from '@/components/buttons/downloadVideoButton.vue'
 import { DownloadItem } from '@/types/DownloadItem'
 import IconButton from '@/components/buttons/iconButton.vue'
-import { onMounted, ref } from 'vue'
+import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 const historyStore = useHistoryStore()
 
-const props = withDefaults(
-  defineProps<{
-    item: DownloadItem
-    isHistory?: boolean
-  }>(),
-  {
-    isHistory: false,
-  },
-)
+const props = defineProps<{
+  item: DownloadItem
+}>()
 
 const removeHistoryItem = () => {
   historyStore
@@ -24,26 +18,85 @@ const removeHistoryItem = () => {
     .catch((error) => console.error('removeHistoryItem', error))
 }
 
-//TODO: check for the file after the download is complete
-//TODO: watch the file so when the users deletes it the app will react
+const fileExists = ref<boolean>(false)
 const checkFile = async (): Promise<boolean> => {
   const bridge = (window as any).bridge
   if (!bridge) {
     return false
   }
 
-  console.log('checkFileItemTitle:', props.item.title)
-
   return await bridge.checkFile(props.item.title)
 }
 
-const fileExists = ref<boolean>(false)
-onMounted(() => {
-  if (props.isHistory) {
+const watchFile = (): void => {
+  const bridge = (window as any).bridge
+  if (!bridge) {
+    return
+  }
+
+  bridge.watchFile({
+    title: props.item.title,
+    id: props.item.uniqueId,
+  })
+}
+
+const unWatchFile = (): void => {
+  const bridge = (window as any).bridge
+  if (!bridge) {
+    return
+  }
+
+  bridge.unWatchFile({
+    title: props.item.title,
+    id: props.item.uniqueId,
+  })
+}
+
+watch(
+  () => props.item.isDownloadedCompleted,
+  (value: boolean | undefined): void => {
+    if (!value) {
+      return
+    }
+
+    historyStore.updateHistoryEntry(props.item.uniqueId, { isDownloadedCompleted: false })
+
     checkFile().then((response: boolean) => {
       fileExists.value = response
+
+      console.log('checkFileWatch:', response)
+      if (response) {
+        watchFile()
+      }
+    })
+  },
+)
+
+watch(
+  () => props.item.fileDeleted,
+  (value: boolean | undefined): void => {
+    console.log('fileDeleted:', value)
+    if (value) {
+      fileExists.value = false
+      historyStore.updateHistoryEntry(props.item.uniqueId, { fileDeleted: false })
+    }
+  },
+)
+
+onMounted(() => {
+  if (props.item.isHistory) {
+    checkFile().then((response: boolean) => {
+      fileExists.value = response
+
+      if (response) {
+        watchFile()
+      }
     })
   }
+})
+
+onUnmounted(() => {
+  unWatchFile()
 })
 
 const openInFolder = () => {
@@ -119,18 +172,21 @@ const openInFolder = () => {
       </div>
 
       <div class="flex items-center gap-x-2">
-        <icon-button v-if="isHistory" @click="removeHistoryItem">
+        <icon-button v-if="props.item.isHistory" @click="removeHistoryItem">
           <TrashIcon class="size-4"></TrashIcon>
         </icon-button>
 
         <button
-          v-if="fileExists && isHistory"
+          v-if="fileExists && props.item.isHistory"
           @click="openInFolder"
           class="inset-shadow cursor-pointer self-center rounded-full p-2 transition-colors ease-in-out hover:bg-zinc-100 active:bg-zinc-200"
         >
           <FolderOpenIcon class="size-5" />
         </button>
-        <download-video-button v-if="!isHistory || (isHistory && !fileExists)" :item="props.item" />
+        <download-video-button
+          v-if="!props.item.isHistory || (props.item.isHistory && !fileExists)"
+          :item="props.item"
+        />
       </div>
     </div>
   </div>

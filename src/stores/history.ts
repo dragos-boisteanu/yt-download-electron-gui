@@ -59,9 +59,39 @@ export const useHistoryStore = defineStore('historyStore', () => {
         (item: DownloadItem) => item.uniqueId === uniqueId,
       )
 
-      if (formatIndex > -1) {
-        history.value.splice(formatIndex, 1)
+      if (formatIndex === -1) {
+        return
       }
+
+      history.value.splice(formatIndex, 1)
+    } catch (error) {
+      throw error
+    }
+  }
+
+  const updateHistoryEntry = async (uniqueId: string, updatePayload: Partial<DownloadItem>) => {
+    try {
+      await update('downloadsHistory', (values) => {
+        const entryIndex = values.findIndex((item: DownloadItem): any => item.uniqueId === uniqueId)
+        if (entryIndex === -1) {
+          return values
+        }
+
+        return values.map((value: DownloadItem, index: number) =>
+          index === entryIndex ? { ...value, ...updatePayload } : value,
+        )
+      })
+
+      const historyItemIndex = history.value.findIndex(
+        (entry: DownloadItem) => entry.uniqueId === uniqueId,
+      )
+      if (historyItemIndex === -1) {
+        return
+      }
+
+      history.value = history.value.map((item: DownloadItem, index: number) =>
+        index === historyItemIndex ? { ...item, ...updatePayload } : item,
+      )
     } catch (error) {
       throw error
     }
@@ -84,6 +114,7 @@ export const useHistoryStore = defineStore('historyStore', () => {
   return {
     history,
     add,
+    updateHistoryEntry,
     remove,
   }
 })

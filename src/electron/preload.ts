@@ -8,6 +8,8 @@ contextBridge.exposeInMainWorld('bridge', {
   setDownloadsPath: () => ipcRenderer.invoke('setDownloadsPath'),
   getDownloadsPath: () => ipcRenderer.invoke('getDownloadsPath'),
   checkFile: (title: string) => ipcRenderer.invoke('checkFile', title),
+  watchFile: (payload: any) => ipcRenderer.send('watchFile', payload),
+  unWatchFile: (payload: any) => ipcRenderer.send('unWatchFile', payload),
 
   downloadVideo: (payload: any) => ipcRenderer.send('downloadVideo', payload),
 

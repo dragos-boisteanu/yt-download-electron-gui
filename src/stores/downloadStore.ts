@@ -57,6 +57,12 @@ export const useDownloadStore = defineStore('downloadStore', () => {
         }
 
         if (isCompleted) {
+          if (progress.item.isHistory) {
+            progress.item.isDownloadedCompleted = true
+          } else {
+            progress.item.isHistory = true
+          }
+
           historyStore
             .add(progress.item)
             .catch((error) => console.error('saveVideoToHistory', error))

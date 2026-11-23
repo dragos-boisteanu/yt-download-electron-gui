@@ -9,4 +9,7 @@ export interface DownloadItem {
   size: string
   thumbnail: string
   uniqueId: string
+  isHistory?: boolean
+  isDownloadedCompleted?: boolean
+  fileDeleted?: boolean
 }

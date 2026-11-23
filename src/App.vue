@@ -127,7 +127,7 @@ const registerElectronListeners = () => {
   }
 
   removeListener = bridge.on('app', (data: any) => {
-    switch (data.action) {
+    switch (data.type) {
       case 'maximize': {
         isMaximized.value = true
         break
@@ -136,11 +136,15 @@ const registerElectronListeners = () => {
         isMaximized.value = false
         break
       }
+
+      case 'fileRemoved': {
+        historyStore.updateHistoryEntry(data.payload.id, { fileDeleted: true })
+        break
+      }
     }
   })
 }
 registerElectronListeners()
-
 onUnmounted(() => {
   if (removeListener) {
     removeListener()
@@ -227,7 +231,6 @@ onUnmounted(() => {
             v-for="historyItem in historyStore.history"
             :key="historyItem.videoId"
             :item="historyItem"
-            :isHistory="true"
           />
         </template>
       </div>
