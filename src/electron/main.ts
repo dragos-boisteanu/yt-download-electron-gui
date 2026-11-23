@@ -353,6 +353,12 @@ ipcMain.on('openInFolder', (_event: IpcMainEvent, title: string) => {
   shell.showItemInFolder(getDownloadedFilePath(title))
 })
 
+ipcMain.on('openInBrowser', (_event: IpcMainEvent, url: string) => {
+  shell.openExternal(url).catch((error) => {
+    console.error('openExternal', error)
+  })
+})
+
 ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
   if (!ytDlpPath) {
     //TODO: better handling case when ytDlpPath is not set

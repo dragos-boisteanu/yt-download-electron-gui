@@ -27,6 +27,7 @@ contextBridge.exposeInMainWorld('bridge', {
   minimize: (): void => ipcRenderer.send('minimize'),
 
   openInFolder: (title: string): void => ipcRenderer.send('openInFolder', title),
+  openInBrowser: (url: string): void => ipcRenderer.send('openInBrowser', url),
 
   showNotification: (payload: any): void => ipcRenderer.send('showNotification', payload),
 

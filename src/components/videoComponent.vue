@@ -118,6 +118,15 @@ const openInFolder = () => {
 
   bridge.openInFolder(props.item.fileName)
 }
+
+const openInBrowser = () => {
+  const bridge = (window as any).bridge
+  if (!bridge) {
+    return false
+  }
+
+  bridge.openInBrowser(props.item.url)
+}
 </script>
 
 <template>
@@ -135,7 +144,10 @@ const openInFolder = () => {
 
         <div class="flex min-w-0 flex-1 items-center gap-x-4">
           <div class="flex min-w-0 flex-1 flex-col justify-start gap-y-0.5">
-            <div class="truncate text-sm font-semibold text-zinc-900">
+            <div
+              class="cursor-pointer truncate text-sm font-semibold text-zinc-900 hover:text-zinc-600"
+              @click="openInBrowser"
+            >
               {{ props.item.title }}
             </div>
             <div class="flex items-center gap-x-2">
