@@ -300,11 +300,8 @@ ipcMain.on('watchFile', (_event: IpcMainEvent, payload: WatchFilePayload) => {
   const key = getFileWatchAbortControllersKey(payload)
 
   if (fileWatchAbortControllers.has(key)) {
-    console.log('watchFile - reset', key)
     fileWatchAbortControllers.get(key).abort()
     fileWatchAbortControllers.delete(key)
-  } else {
-    console.log('watchFile - new', key)
   }
 
   const abortController = new AbortController()
@@ -315,10 +312,7 @@ ipcMain.on('watchFile', (_event: IpcMainEvent, payload: WatchFilePayload) => {
     {
       signal: abortController.signal,
     },
-    (eventType: WatchEventType, filename: string) => {
-      console.log('watching - ', filename)
-      console.log('eventType', eventType)
-
+    (eventType: WatchEventType) => {
       if (eventType === 'rename' && fs.existsSync(filePath)) {
         return
       }
