@@ -18,6 +18,7 @@ import QueueToggler from '@/components/queue/queueToggler.vue'
 import { useDownloadStore } from '@/stores/downloadStore'
 import { DownloadItem } from '@/types/DownloadItem'
 import formatSeconds from '@/helpers/formatSeconds'
+import formatFileName from '@/helpers/formatFileName'
 
 const historyStore = useHistoryStore()
 
@@ -86,16 +87,18 @@ const requestVideoInfo = debounce(async () => {
         return fpsB - fpsA // Higher FPS first
       })
       .map((format): DownloadItem => {
+        const codec = getFriendlyCodecName(format.vcodec)
         return {
           videoId: format.format_id,
           audioId: highestAudioFormat.format_id,
           url: videoUrl.value,
-          codec: getFriendlyCodecName(format.vcodec),
+          codec,
           duration: formatSeconds(info.duration),
           size: formatBytesToMB(format.filesize),
           resolution: format.resolution,
           thumbnail: info.thumbnail,
           title: info.title,
+          fileName: formatFileName(info.title, format.resolution, codec),
           uniqueId: `${format.format_id}:${highestAudioFormat.format_id}`,
         }
       })

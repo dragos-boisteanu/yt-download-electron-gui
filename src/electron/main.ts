@@ -337,6 +337,7 @@ ipcMain.on('watchFile', (_event: IpcMainEvent, payload: WatchFilePayload) => {
 })
 
 ipcMain.on('unWatchFile', (_event: IpcMainEvent, payload: WatchFilePayload) => {
+  console.log('unWatchFile', payload)
   const key = getFileWatchAbortControllersKey(payload)
 
   const abortController = fileWatchAbortControllers.get(key)
@@ -370,9 +371,7 @@ ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
   let lastReportedFloor = -1
 
   const formatSelection = `${payload.videoId}+${payload.audioId}` // e.g., "313+251"
-
-  //TODO: handle cases when the same video is downloaded multiple times with different formats
-  const outputTemplate = path.join(downloadsFolder, `${payload.title}.${EXTENSION}`)
+  const outputTemplate = path.join(downloadsFolder, `${payload.fileName}.${EXTENSION}`)
 
   const args = [
     '-f',
@@ -470,7 +469,7 @@ ipcMain.on('downloadVideo', (event, payload: DownloadItem) => {
         status: 'error',
         message: `Download failed with exit code ${code}`,
         percentage: 0,
-        title: payload.title,
+        title: payload.fileName,
         uniqueId: payload.uniqueId,
       })
     }

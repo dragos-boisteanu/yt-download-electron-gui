@@ -9,6 +9,6 @@ export interface YtDlpProgress {
   eta?: string
   message?: string
   uniqueId?: string
-  title?: string
+  fileName?: string
   item?: DownloadItem
 }

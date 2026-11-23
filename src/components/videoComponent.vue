@@ -23,6 +23,11 @@ const props = withDefaults(
 const removeHistoryItem = () => {
   historyStore
     .remove(props.item.uniqueId)
+    .then(() => {
+      if (fileExists.value) {
+        unWatchFile()
+      }
+    })
     .catch((error) => console.error('removeHistoryItem', error))
 }
 
@@ -33,7 +38,7 @@ const checkFile = async (): Promise<boolean> => {
     return false
   }
 
-  return await bridge.checkFile(props.item.title)
+  return await bridge.checkFile(props.item.fileName)
 }
 
 const watchFile = (): void => {
@@ -43,7 +48,7 @@ const watchFile = (): void => {
   }
 
   bridge.watchFile({
-    title: props.item.title,
+    title: props.item.fileName,
     id: props.item.uniqueId,
   })
 }
@@ -55,7 +60,7 @@ const unWatchFile = (): void => {
   }
 
   bridge.unWatchFile({
-    title: props.item.title,
+    title: props.item.fileName,
     id: props.item.uniqueId,
   })
 }
@@ -72,7 +77,6 @@ watch(
     checkFile().then((response: boolean) => {
       fileExists.value = response
 
-      console.log('checkFileWatch:', response)
       if (response) {
         watchFile()
       }
@@ -83,7 +87,6 @@ watch(
 watch(
   () => props.item.fileDeleted,
   (value: boolean | undefined): void => {
-    console.log('fileDeleted:', value)
     if (value) {
       fileExists.value = false
       historyStore.updateHistoryEntry(props.item.uniqueId, { fileDeleted: false })
@@ -113,7 +116,7 @@ const openInFolder = () => {
     return false
   }
 
-  bridge.openInFolder(props.item.title)
+  bridge.openInFolder(props.item.fileName)
 }
 </script>
 

@@ -2,6 +2,7 @@ export interface DownloadItem {
   videoId: string
   audioId: string
   title: string
+  fileName: string
   duration: string
   url: string
   resolution: string
