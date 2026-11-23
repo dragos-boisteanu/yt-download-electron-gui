@@ -5,6 +5,7 @@ import DownloadVideoButton from '@/components/buttons/downloadVideoButton.vue'
 import { DownloadItem } from '@/types/DownloadItem'
 import IconButton from '@/components/buttons/iconButton.vue'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
+import SaveForLaterButton from '@/components/buttons/saveForLaterButton.vue'
 
 const historyStore = useHistoryStore()
 
@@ -206,6 +207,7 @@ const openInBrowser = () => {
         >
           <FolderOpenIcon class="size-5" />
         </button>
+        <save-for-later-button v-if="!props.item.isHistory" :item="props.item" />
         <download-video-button
           v-if="!props.item.isHistory || (props.item.isHistory && !fileExists)"
           :item="props.item"
