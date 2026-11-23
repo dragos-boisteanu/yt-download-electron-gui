@@ -18,7 +18,7 @@ const download = () => {
 
 <template>
   <icon-button @click="download">
-    <ArrowDownOnSquareIcon class="size-4" />
+    <ArrowDownOnSquareIcon class="size-5" />
   </icon-button>
 </template>
 
