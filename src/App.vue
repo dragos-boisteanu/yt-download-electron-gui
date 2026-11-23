@@ -19,6 +19,7 @@ import { useDownloadStore } from '@/stores/downloadStore'
 import { DownloadItem } from '@/types/DownloadItem'
 import formatSeconds from '@/helpers/formatSeconds'
 import formatFileName from '@/helpers/formatFileName'
+import getVideoUniqueId from '@/helpers/getVideoUniqueId'
 
 const historyStore = useHistoryStore()
 
@@ -68,7 +69,6 @@ const requestVideoInfo = debounce(async () => {
     }
 
     const audioFormats = info.formats.filter((format) => format.audio_ext !== 'none')
-
     const highestAudioFormat = audioFormats.at(-1)
 
     downloadItems.value = info.formats
@@ -88,6 +88,7 @@ const requestVideoInfo = debounce(async () => {
       })
       .map((format): DownloadItem => {
         const codec = getFriendlyCodecName(format.vcodec)
+
         return {
           videoId: format.format_id,
           audioId: highestAudioFormat.format_id,
@@ -99,7 +100,7 @@ const requestVideoInfo = debounce(async () => {
           thumbnail: info.thumbnail,
           title: info.title,
           fileName: formatFileName(info.title, format.resolution, codec),
-          uniqueId: `${format.format_id}:${highestAudioFormat.format_id}`,
+          uniqueId: getVideoUniqueId(info.title, format.format_id, highestAudioFormat.format_id),
         }
       })
   } catch (error) {

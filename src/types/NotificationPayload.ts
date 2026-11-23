@@ -5,5 +5,4 @@ export interface NotificationPayload {
   openApp?: boolean
   openFolder?: boolean
   fileName?: string
-  tag?: string
 }

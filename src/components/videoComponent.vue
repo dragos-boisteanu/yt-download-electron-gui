@@ -13,11 +13,9 @@ const props = withDefaults(
   defineProps<{
     item: DownloadItem
     canDelete?: boolean
-    isHistory?: false
   }>(),
   {
     canDelete: false,
-    isHistory: false,
   },
 )
 
@@ -207,7 +205,10 @@ const openInBrowser = () => {
         >
           <FolderOpenIcon class="size-5" />
         </button>
-        <save-for-later-button v-if="!props.item.isHistory" :item="props.item" />
+        <!--        <save-for-later-button
+          v-if="!props.item.isHistory && !props.item.isDownloadedCompleted"
+          :item="props.item"
+        />-->
         <download-video-button
           v-if="!props.item.isHistory || (props.item.isHistory && !fileExists)"
           :item="props.item"

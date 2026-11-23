@@ -20,6 +20,7 @@ import { DownloadItem } from '@/types/DownloadItem'
 import sanitizeVideoTitle from '../helpers/sanitizeVideoTitle.js'
 import { WatchEventType } from 'fs'
 import { WatchFilePayload } from '@/types/WatchFilePayload'
+import crypto from 'crypto'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -262,11 +263,23 @@ ipcMain.handle('getDownloadsPath', () => downloadsFolder)
 const getDownloadedFilePath = (title: string) => {
   return path.join(downloadsFolder, `${title}.${EXTENSION}`)
 }
+
+const notifications = new Map<string, Notification>()
+function getNotificationId(fileName: string, length = 16) {
+  return crypto.createHash('sha256').update(fileName).digest('hex').slice(0, length)
+}
 ipcMain.on('showNotification', (_event: IpcMainEvent, payload: NotificationPayload): void => {
+  const id = getNotificationId(payload.fileName)
+  const existingNotification = notifications.get(id)
+  if (existingNotification) {
+    existingNotification.close()
+    notifications.delete(id)
+  }
+
   const notification = new Notification({
     title: payload.title,
     body: payload.body,
-    id: payload.tag,
+    id,
   })
 
   notification.on('click', () => {
@@ -285,6 +298,7 @@ ipcMain.on('showNotification', (_event: IpcMainEvent, payload: NotificationPaylo
     }
   })
 
+  notifications.set(id, notification)
   notification.show()
 })
 
