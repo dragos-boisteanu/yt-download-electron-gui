@@ -8,9 +8,17 @@ import { onMounted, onUnmounted, ref, watch } from 'vue'
 
 const historyStore = useHistoryStore()
 
-const props = defineProps<{
-  item: DownloadItem
-}>()
+const props = withDefaults(
+  defineProps<{
+    item: DownloadItem
+    canDelete?: boolean
+    isHistory?: false
+  }>(),
+  {
+    canDelete: false,
+    isHistory: false,
+  },
+)
 
 const removeHistoryItem = () => {
   historyStore

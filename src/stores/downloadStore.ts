@@ -15,6 +15,27 @@ export const useDownloadStore = defineStore('downloadStore', () => {
   const queueStore = useQueueStore()
   const historyStore = useHistoryStore()
 
+  //TODO: only show notification if the app is not focused
+  const showNotification = (title: string, uniqueId: string, isCompleted: boolean) => {
+    let body: string
+
+    if (isCompleted) {
+      title = 'Video downloaded successfully.'
+      body = `${title} downloaded successfully.`
+    } else {
+      title = 'Download failed'
+      body = `Failed to download ${title}`
+    }
+
+    notificationStore.showNotification({
+      openFolder: true,
+      body,
+      title,
+      uniqueId,
+      fileName: title,
+    })
+  }
+
   const registerDownloadProgressListener = () => {
     const bridge = (window as any).bridge
     if (!bridge) {
@@ -30,30 +51,13 @@ export const useDownloadStore = defineStore('downloadStore', () => {
         downloadState.value = progress.message
       }
 
-      //TODO: split this in multiple dedicate functions
       if (progress.status === 'completed' || progress.status === 'error') {
         isDownloading.value = false
-        let title: string
-        let body: string
 
         const isCompleted = progress.status === 'completed'
 
         if (notificationStore.canShowNotification) {
-          if (isCompleted) {
-            title = 'Video downloaded successfully.'
-            body = `${progress.item.title} downloaded successfully.`
-          } else {
-            title = 'Download failed'
-            body = `Failed to download ${progress.title}`
-          }
-
-          notificationStore.showNotification({
-            openFolder: true,
-            body,
-            title,
-            uniqueId: progress.item.uniqueId,
-            fileName: progress.item.title,
-          })
+          showNotification(progress.item.title, progress.item.uniqueId, isCompleted)
         }
 
         if (isCompleted) {
