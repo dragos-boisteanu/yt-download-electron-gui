@@ -7,7 +7,7 @@
     "module": "es2022",
     "moduleResolution": "bundler",
     "sourceMap": true,
-    "target": "es2022",
+    "target": "es2025",
     "skipLibCheck": true,
     "noImplicitAny": false,
     "strictNullChecks": false,

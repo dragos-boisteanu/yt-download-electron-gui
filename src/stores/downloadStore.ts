@@ -5,6 +5,8 @@ import { useNotificationStore } from '@/stores/notification'
 import { useQueueStore } from '@/stores/queue'
 import { useHistoryStore } from '@/stores/history'
 import { DownloadItem } from '@/types/DownloadItem'
+import { uniqueId } from 'lodash-es'
+import { useBookmarksStore } from '@/stores/bookmarksStore'
 
 export const useDownloadStore = defineStore('downloadStore', () => {
   const percentage = ref<number>(0)
@@ -14,6 +16,7 @@ export const useDownloadStore = defineStore('downloadStore', () => {
   const notificationStore = useNotificationStore()
   const queueStore = useQueueStore()
   const historyStore = useHistoryStore()
+  const bookmarksStore = useBookmarksStore()
 
   //TODO: only show notification if the app is not focused
   const showNotification = (fileName: string, uniqueId: string, isCompleted: boolean) => {
@@ -68,6 +71,10 @@ export const useDownloadStore = defineStore('downloadStore', () => {
           } else {
             progress.item.isHistory = true
           }
+
+          bookmarksStore
+            .remove(progress.item.uniqueId)
+            .catch((error) => console.error('removeBookmark', error))
 
           historyStore
             .add(progress.item)

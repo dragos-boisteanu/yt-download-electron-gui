@@ -5,7 +5,7 @@ import DownloadVideoButton from '@/components/buttons/downloadVideoButton.vue'
 import { DownloadItem } from '@/types/DownloadItem'
 import IconButton from '@/components/buttons/iconButton.vue'
 import { onMounted, onUnmounted, ref, watch } from 'vue'
-import SaveForLaterButton from '@/components/buttons/saveForLaterButton.vue'
+import BookmarkButton from '@/components/buttons/bookmarkButton.vue'
 
 const historyStore = useHistoryStore()
 
@@ -163,14 +163,25 @@ const openInBrowser = () => {
             <!-- Tags for small screens (right under duration, in line with image) -->
             <div class="flex items-center gap-x-2 pt-1 md:hidden">
               <div
-                class="w-20 rounded-md border border-orange-100 bg-orange-50 px-2 py-1 text-center text-xs text-orange-700"
+                class="w-20 rounded-md border border-orange-100 bg-orange-50 px-2 py-1 text-center text-xs font-semibold text-orange-700"
               >
                 {{ props.item.resolution }}
+              </div>
+              <div
+                class="w-16 justify-center rounded-md bg-teal-50 px-2 py-1 text-center text-xs font-semibold text-teal-600"
+              >
+                {{ props.item.fps }} fps
               </div>
               <div
                 class="w-12 justify-center rounded-md bg-slate-100 px-2 py-1 text-center text-xs font-bold text-slate-600"
               >
                 {{ props.item.codec }}
+              </div>
+              <div
+                v-if="item.hdr"
+                class="w-16 justify-center rounded-md bg-amber-100 px-2 py-1 text-center text-xs font-semibold text-amber-600"
+              >
+                HDR
               </div>
             </div>
           </div>
@@ -182,12 +193,23 @@ const openInBrowser = () => {
     <div class="flex w-full items-center justify-end gap-2 md:w-fit md:justify-between">
       <div class="hidden items-center gap-x-2 md:flex">
         <div
-          class="w-20 rounded-md border border-orange-100 bg-orange-50 px-2 py-1 text-center text-xs text-orange-700"
+          v-if="item.hdr"
+          class="w-16 justify-center rounded-md bg-yellow-100 px-2 py-1 text-center text-xs font-semibold text-yellow-600 sm:visible"
+        >
+          HDR
+        </div>
+        <div
+          class="w-20 rounded-md border border-orange-100 bg-orange-50 px-2 py-1 text-center text-xs font-semibold text-orange-700"
         >
           {{ props.item.resolution }}
         </div>
         <div
-          class="w-12 justify-center rounded-md bg-slate-100 px-2 py-1 text-center text-xs font-bold text-slate-600"
+          class="w-16 justify-center rounded-md bg-teal-50 px-2 py-1 text-center text-xs font-semibold text-teal-600"
+        >
+          {{ props.item.fps }} fps
+        </div>
+        <div
+          class="w-12 justify-center rounded-md bg-slate-100 px-2 py-1 text-center text-xs font-semibold text-slate-600"
         >
           {{ props.item.codec }}
         </div>
@@ -205,10 +227,7 @@ const openInBrowser = () => {
         >
           <FolderOpenIcon class="size-5" />
         </button>
-        <!--        <save-for-later-button
-          v-if="!props.item.isHistory && !props.item.isDownloadedCompleted"
-          :item="props.item"
-        />-->
+        <bookmark-button v-if="!props.item.isHistory" :item="props.item" />
         <download-video-button
           v-if="!props.item.isHistory || (props.item.isHistory && !fileExists)"
           :item="props.item"

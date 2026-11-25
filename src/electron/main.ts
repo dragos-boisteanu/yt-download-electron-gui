@@ -351,7 +351,6 @@ ipcMain.on('watchFile', (_event: IpcMainEvent, payload: WatchFilePayload) => {
 })
 
 ipcMain.on('unWatchFile', (_event: IpcMainEvent, payload: WatchFilePayload) => {
-  console.log('unWatchFile', payload)
   const key = getFileWatchAbortControllersKey(payload)
 
   const abortController = fileWatchAbortControllers.get(key)

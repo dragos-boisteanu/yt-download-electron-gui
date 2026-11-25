@@ -8,9 +8,12 @@ export interface DownloadItem {
   resolution: string
   codec: string
   size: string
+  fps: number
+  hdr: boolean
   thumbnail: string
   uniqueId: string
   isHistory?: boolean
   isDownloadedCompleted?: boolean
+  isBookmarked?: boolean
   fileDeleted?: boolean
 }

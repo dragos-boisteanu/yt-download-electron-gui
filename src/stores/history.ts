@@ -46,24 +46,26 @@ export const useHistoryStore = defineStore('historyStore', () => {
   const remove = async (uniqueId: string) => {
     try {
       await update('downloadsHistory', (values) => {
-        const formatIndex = values.findIndex((item: DownloadItem) => item.uniqueId === uniqueId)
+        const historyEntryIndex = values.findIndex(
+          (item: DownloadItem) => item.uniqueId === uniqueId,
+        )
 
-        if (formatIndex === -1) {
+        if (historyEntryIndex === -1) {
           return values
         }
 
-        return values.toSpliced(formatIndex, 1)
+        return values.toSpliced(historyEntryIndex, 1)
       })
 
-      const formatIndex = history.value.findIndex(
+      const historyEntryIndex = history.value.findIndex(
         (item: DownloadItem) => item.uniqueId === uniqueId,
       )
 
-      if (formatIndex === -1) {
+      if (historyEntryIndex === -1) {
         return
       }
 
-      history.value.splice(formatIndex, 1)
+      history.value.splice(historyEntryIndex, 1)
     } catch (error) {
       throw error
     }
